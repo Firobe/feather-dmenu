@@ -19,7 +19,7 @@ let gather_style select prompts =
     )
   |> String.concat ~sep:","
 
-let menu' title theme prompts =
+let menu' title theme on_none prompts =
   (* Concat choice\nchoice\nchoice... *)
   let input = prompts |> List.map ~f:(fun e -> e.label) |> String.concat ~sep:"\n" in
   (* Concat 1,3,4,... for urgent prompts *)
@@ -33,7 +33,9 @@ let menu' title theme prompts =
                    "-a"; active; "-p"; title ])
     |> collect_stdout in
   if String.equal choice "" then
-    Result.fail (`Msg "No action selected")
+    match on_none with
+    | `Nothing -> Result.return ()
+    | `Error -> Result.fail (`Msg "No action selected")
   else
     let* choice = get_choice choice prompts in
     choice.f ()
@@ -42,8 +44,8 @@ let error txt =
   let red_error = "<span color='red'><b>Error: </b></span>" in
   process "rofi" [ "-markup"; "-e"; red_error ^ txt ] |> run
 
-let menu ?(title="Select an action") ?theme prompts =
-  match menu' title theme prompts with
+let menu ?(title="Select an action") ?theme ?(on_none=`Nothing) prompts =
+  match menu' title theme on_none prompts with
   | Result.Ok () -> ()
   | Result.Error (`Msg err) -> error err
   | Result.Error _ -> error "Unknown error"
