@@ -1,0 +1,6 @@
+(library
+	(name feather_dmenu)
+    (public_name feather-dmenu)
+    (libraries feather)
+	(modules dmenu)
+)
