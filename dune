@@ -1,6 +1,12 @@
 (library
-	(name feather_dmenu)
+    (name feather_dmenu)
     (public_name feather-dmenu)
     (libraries feather)
-	(modules dmenu)
+    (modules dmenu)
+)
+
+(executable
+  (name example)
+  (libraries feather_dmenu)
+  (modules example)
 )
