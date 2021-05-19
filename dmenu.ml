@@ -50,7 +50,7 @@ let error txt =
   let red_error = "<span color='red'><b>Error: </b></span>" in
   process "rofi" [ "-markup"; "-e"; red_error ^ txt ] |> run
 
-let menu ?(title="Select an action") ?(on_none=`Nothing) ?(on_unknown=`Nothing)
+let menu ?(title="Select an action") ?(on_none=`Nothing) ?(on_unknown=`Error)
     ?msg ?theme ?misc prompts =
   match menu' title msg theme on_none on_unknown misc prompts with
   | Result.Ok () -> ()
