@@ -7,12 +7,11 @@ let (let*) v f = Result.bind v ~f
 type 'e prompt = {
   label: string;
   style: [`Urgent | `Active | `None];
-  f: unit -> ([`Unit | `String of string], 'e) Result.t;
+  f: (unit -> (unit, 'e) Result.t) option;
 }
 
 let get_choice input prompts =
   List.find prompts ~f:(fun p -> String.equal p.label input)
-  |> Result.of_option ~error:(`Msg "Invalid action")
 
 let gather_style select prompts =
   List.filter_mapi prompts ~f:(fun i e ->
@@ -20,7 +19,12 @@ let gather_style select prompts =
     )
   |> String.concat ~sep:","
 
-let menu' title msg theme on_none misc prompts f =
+let corner_case str err_str = function
+  | `Nothing -> Result.return ()
+  | `Error -> Result.fail (`Msg err_str)
+  | `Custom f -> f str
+
+let menu' title msg theme on_none on_unknown misc prompts =
   (* Concat choice\nchoice\nchoice... *)
   let input = prompts |> List.map ~f:(fun e -> e.label) |> String.concat ~sep:"\n" in
   (* Concat 1,3,4,... for urgent prompts *)
@@ -36,26 +40,24 @@ let menu' title msg theme on_none misc prompts f =
                                   "-a"; active; "-p"; title ])
     |> collect_stdout in
   if String.equal choice "" then
-    match on_none with
-    | `Nothing -> Result.return `Unit
-    | `Error -> Result.fail (`Msg "No action selected")
-  else begin
-    match f with
-    | None ->
-      let* choice = get_choice choice prompts in
-      choice.f ()
-    | Some f ->f choice
-  end
+    corner_case choice "No action selected" on_none
+  else
+    match Option.(get_choice choice prompts >>= (fun a -> a.f)) with
+    | Some f -> f ()
+    | None -> corner_case choice "Don't know what to do" on_unknown
 
 let error txt =
   let red_error = "<span color='red'><b>Error: </b></span>" in
   process "rofi" [ "-markup"; "-e"; red_error ^ txt ] |> run
 
-let menu ?(title="Select an action") ?msg ?theme ?(on_none=`Nothing) ?misc ?f prompts =
-  match menu' title msg theme on_none misc prompts f with
-  | Result.Ok _ -> ()
+let menu ?(title="Select an action") ?(on_none=`Nothing) ?(on_unknown=`Nothing)
+    ?msg ?theme ?misc prompts =
+  match menu' title msg theme on_none on_unknown misc prompts with
+  | Result.Ok () -> ()
   | Result.Error (`Msg err) -> error err
   | Result.Error _ -> error "Unknown error"
 
-let menu_get ?(title="Select an action") ?msg ?theme ?(on_none=`Nothing) ?misc ?f prompts =
-  menu' title msg theme on_none misc prompts f
+(* Builder functions *)
+let empty_row = {label = ""; style = `None; f = None}
+let default_entry ?(style=`None) label = {label; style; f = None}
+let entry ?(style=`None) label f = {label; style; f = Some f}
