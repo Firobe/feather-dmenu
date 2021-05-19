@@ -19,17 +19,18 @@ let gather_style select prompts =
     )
   |> String.concat ~sep:","
 
-let menu' title theme on_none prompts =
+let menu' title msg theme on_none prompts =
   (* Concat choice\nchoice\nchoice... *)
   let input = prompts |> List.map ~f:(fun e -> e.label) |> String.concat ~sep:"\n" in
   (* Concat 1,3,4,... for urgent prompts *)
   let urgents = gather_style `Urgent prompts in
   let active = gather_style `Active prompts in
   let theme_l = match theme with None -> [] | Some t -> [ "-theme"; t ] in
+  let msg_l = match msg with None -> [] | Some m -> [ "-mesg"; m ] in
   let choice =
     process "echo" [ "-e"; input ] |.
     process "rofi"
-      (theme_l @ [ "-markup-rows"; "-dmenu"; "-u"; urgents ;
+      (theme_l @ msg_l @ [ "-markup-rows"; "-dmenu"; "-u"; urgents ;
                    "-a"; active; "-p"; title ])
     |> collect_stdout in
   if String.equal choice "" then
@@ -44,8 +45,8 @@ let error txt =
   let red_error = "<span color='red'><b>Error: </b></span>" in
   process "rofi" [ "-markup"; "-e"; red_error ^ txt ] |> run
 
-let menu ?(title="Select an action") ?theme ?(on_none=`Nothing) prompts =
-  match menu' title theme on_none prompts with
+let menu ?(title="Select an action") ?msg ?theme ?(on_none=`Nothing) prompts =
+  match menu' title msg theme on_none prompts with
   | Result.Ok () -> ()
   | Result.Error (`Msg err) -> error err
   | Result.Error _ -> error "Unknown error"
