@@ -13,3 +13,4 @@ let process_arbitrary str =
 
 let main =
   Dmenu.menu ~on_unknown:(`Custom process_arbitrary) prompts
+  |> Dmenu.catch_errors

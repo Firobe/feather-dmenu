@@ -1,9 +1,6 @@
 open Feather
 open Base
 
-let (let*) v f = Result.bind v ~f
-
-
 type 'e prompt = {
   label: string;
   style: [`Urgent | `Active | `None];
@@ -52,7 +49,9 @@ let error txt =
 
 let menu ?(title="Select an action") ?(on_none=`Nothing) ?(on_unknown=`Error)
     ?msg ?theme ?misc prompts =
-  match menu' title msg theme on_none on_unknown misc prompts with
+  menu' title msg theme on_none on_unknown misc prompts
+
+let catch_errors = function
   | Result.Ok () -> ()
   | Result.Error (`Msg err) -> error err
   | Result.Error _ -> error "Unknown error"
