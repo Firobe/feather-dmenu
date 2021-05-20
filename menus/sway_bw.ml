@@ -58,7 +58,7 @@ let password_menu open_session =
       | 0 when not (String.equal "" session) -> open_session session
       | _ -> Result.fail (`Msg "Could not unlock vault")
   in
-  Dmenu.menu ~title ~theme ~misc ~on_none:`Error ~on_unknown:(`Custom check_password) []
+  Dmenu.menu ~title ~theme ~allow_custom:true ~misc ~on_unknown:(`Custom check_password) []
 
 let array_from_name name items =
   let str =
