@@ -7,8 +7,8 @@ let prompts = Dmenu.[
   entry ~style:`Urgent "This is a custom entry" (fun () -> Result.ok ());
 ]
 
-let process_arbitrary str = 
-  Printf.printf "I got %s\n%!" str;
+let process_arbitrary exit str =
+  Printf.printf "I got %s\n with exit status %d%!" str exit;
   Result.ok ()
 
 let main =

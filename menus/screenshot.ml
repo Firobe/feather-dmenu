@@ -64,14 +64,14 @@ let video_running () =
   let pid = process "pidof" ["ffmpeg"] |> collect_stdout in
   if last_exit () = 0 then Some pid else None
 
-let rename_video new_name =
+let rename_video _ new_name =
   let home = Sys.getenv "HOME" in
   let full_path = home ^ "/" ^ new_name in
   mv default_path full_path |> run ;
   notify ("Video saved at " ^ full_path) ;
   Result.ok ()
 
-let abort _ =
+let abort _ _ =
   delete_default |> run;
   notify "Video was aborted.";
   Result.ok ()
@@ -84,14 +84,14 @@ let video_stop pid =
     Dmenu.menu
       ~msg:"The video is in MP4 format. It will be placed into your home folder."
       ~on_unknown:(`Custom rename_video) ~on_none:(`Custom abort)
-      ~title:"File name" Dmenu.[entry ~style:`Urgent "Abort" abort]
+      ~title:"File name" Dmenu.[entry ~style:`Urgent "Abort" (abort 0)]
 
 let pulse_menu () =
   let ids =
     process "pactl" [ "list"; "short" ; "sources" ]
     |. cut ~d:'\t' 1 |> collect_lines
   in
-  let descriptions = 
+  let descriptions =
     process "pactl" [ "list"; "sources" ]
     |. grep "Description" |. cut ~d:':' 2
     |> collect_lines |> List.map String.trim
@@ -113,7 +113,7 @@ let video_menu () =
 let menu () =
   Dmenu.menu ~title:"Select an action (applies to zone or window)" Dmenu.[
       entry "  Take a screenshot" take_screenshot;
-      entry "  Take a video" video_menu 
+      entry "  Take a video" video_menu
     ]
 
 let main =
