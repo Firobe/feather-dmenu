@@ -16,10 +16,10 @@ let gather_style select prompts =
     )
   |> String.concat ~sep:","
 
-let do_exit code str err_str = function
+let do_exit err_str = function
   | `Nothing -> Result.return ()
   | `Error -> Result.fail (`Msg err_str)
-  | `Custom f -> f code str
+  | `Custom f -> f ()
 
 let menu' title msg theme case on_exit on_unknown misc prompts =
   (* Concat choice\nchoice\nchoice... *)
@@ -40,7 +40,7 @@ let menu' title msg theme case on_exit on_unknown misc prompts =
     |> collect_stdout in
   let code = last_exit () in
   if String.equal choice "" && code = 1 then
-    do_exit code choice "No action selected" on_exit
+    do_exit "No action selected" on_exit
   else
     match Option.(get_choice choice prompts >>= (fun a -> a.f)) with
     | Some f -> f ()

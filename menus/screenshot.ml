@@ -72,7 +72,7 @@ let rename_video _ new_name =
   notify ("Video saved at " ^ full_path) ;
   Result.ok ()
 
-let abort _ _ =
+let abort () =
   delete_default |> run;
   notify "Video was aborted.";
   Result.ok ()
@@ -85,7 +85,7 @@ let video_stop pid =
     Dmenu.menu
       ~msg:"The video is in MP4 format. It will be placed into your home folder."
       ~on_unknown:rename_video ~on_exit:(`Custom abort)
-      ~title:"File name" Dmenu.[entry ~style:`Urgent "Abort" (abort 0)]
+      ~title:"File name" Dmenu.[entry ~style:`Urgent "Abort" abort]
 
 let pulse_menu () =
   let ids =

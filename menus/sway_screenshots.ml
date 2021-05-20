@@ -4,6 +4,10 @@ open Infix
 
 let (let*) = Result.bind
 
+let misc = ["-kb-move-char-back";"Control+b";"-kb-move-char-forward";
+            "Control+f";"-kb-accept-entry"; "Right,Return,KP_Enter";
+            "-kb-cancel";"Escape,Control+g,Control+bracketleft,Left" ]
+
 let notify im txt =
   let icon =
     match im with
@@ -96,10 +100,10 @@ let select_output () = outputs() |. process "slurp" []
 let title = "Screenshoter"
 let theme = "~/.config/rofi/action.rasi"
 
-let rec main_menu _ _ =
+let rec main_menu () =
   Dmenu.menu ~title ~theme  Dmenu.[
       entry ~style:`Active ((span "" "13" "1000")^"  Take a screenshot !") screenshot_menu;
-      entry ~style:`Urgent ((span "" "12" "1000")^(span " " "13" "0")^" Record a video !") (fun () -> ask_audio_menu 0 "");
+      entry ~style:`Urgent ((span "" "12" "1000")^(span " " "13" "0")^" Record a video !") ask_audio_menu;
     ]
 and screenshot_menu () =
   Dmenu.menu ~title:"Take a screenshot" ~theme ~misc ~on_exit:(`Custom main_menu) Dmenu.[
@@ -109,12 +113,12 @@ and screenshot_menu () =
       entry ((span "缾" "13" "1000")^"  Capture select window") (cs (select_window ()));
       entry ((span "" "11" "1000")^(span " " "13" "0")^" Capture select output") (cs (select_output()));
     ]
-and ask_audio_menu _ _ =
+and ask_audio_menu () =
   Dmenu.menu ~title:"Should capture sound ?" ~misc ~on_exit:(`Custom main_menu) Dmenu.[
-      entry ~style:`Active "墳 Yes" (fun () -> pulse_menu 0 "");
+      entry ~style:`Active "墳 Yes" pulse_menu;
       entry ~style:`Urgent "婢 No" record_menu;
     ]
-and pulse_menu _ _ =
+and pulse_menu () =
   let ids =
     process "pactl" [ "list"; "short" ; "sources" ]
     |. cut ~d:'\t' 1 |> collect_lines
@@ -143,5 +147,4 @@ let main =debug := true;
   let rec_pid = rec_pid () in
   match last_exit () with
   | 0 -> stop rec_pid
-  | _ ->
-    main_menu 0 "" |> Dmenu.catch_errors
+  | _ -> main_menu () |> Dmenu.catch_errors
