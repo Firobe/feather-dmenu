@@ -8,9 +8,10 @@ let prompts = Dmenu.[
 ]
 
 let process_arbitrary exit str =
+  if String.equal "" str then failwith "LOL";
   Printf.printf "I got %s\n with exit status %d%!" str exit;
   Result.ok ()
 
 let main =
-  Dmenu.menu ~on_unknown:(`Custom process_arbitrary) prompts
+  Dmenu.menu ~on_unknown:process_arbitrary ~on_exit:`Error prompts
   |> Dmenu.catch_errors

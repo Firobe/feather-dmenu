@@ -58,7 +58,7 @@ let password_menu open_session =
       | 0 when not (String.equal "" session) -> open_session session
       | _ -> Result.fail (`Msg "Could not unlock vault")
   in
-  Dmenu.menu ~title ~theme ~allow_custom:true ~misc ~on_unknown:(`Custom check_password) []
+  Dmenu.menu ~title ~theme ~misc ~on_unknown:check_password []
 
 let array_from_name name items =
   let str =
@@ -75,12 +75,11 @@ let load_items session =
   let f str = not (String.equal "" str) in
   get_result ~f str "Could not load items"
 
-let rofi_menu f prompt =
+let rofi_menu on_unknown prompt =
   let title = "Name" in
-  let misc = ["-i"; "-no-custom"]@actions in
-  Dmenu.menu ~title ~msg ~misc ~on_unknown:(`Custom f) (List.map prompt ~f:(fun l -> Dmenu.default_entry l))
+  Dmenu.menu ~title ~msg ~misc:actions ~on_unknown (List.map prompt ~f:(fun l -> Dmenu.default_entry l))
 
-let show_items f session =
+let show_items on_unknown session =
   let* items = load_items session in
   let items_names =
     echo items |.
@@ -88,7 +87,7 @@ let show_items f session =
     |> collect_stdout
   in
   let lines = String.split items_names ~on:'\n' in
-  rofi_menu (f session items) lines
+  rofi_menu (on_unknown session items) lines
 
 let copy str =
   process "echo" ["-n";str] |. process "wl-copy" [] |> run;

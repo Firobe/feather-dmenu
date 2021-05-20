@@ -102,7 +102,7 @@ let rec main_menu _ _ =
       entry ~style:`Urgent ((span "" "12" "1000")^(span " " "13" "0")^" Record a video !") (fun () -> ask_audio_menu 0 "");
     ]
 and screenshot_menu () =
-  Dmenu.menu ~title:"Take a screenshot" ~theme ~on_none:(`Custom main_menu) Dmenu.[
+  Dmenu.menu ~title:"Take a screenshot" ~theme ~misc ~on_exit:(`Custom main_menu) Dmenu.[
       entry ((span "" "11" "1000")^(span " " "13" "0")^" Capture fullscreen") (cs (outputs()));
       entry ((span "" "13" "1000")^"  Capture region") (cs (clip ()));
       entry ((span "" "13" "1000")^"  Capture focused") (cs (focused()));
@@ -110,7 +110,7 @@ and screenshot_menu () =
       entry ((span "" "11" "1000")^(span " " "13" "0")^" Capture select output") (cs (select_output()));
     ]
 and ask_audio_menu _ _ =
-  Dmenu.menu ~title:"Should capture sound ?" ~on_none:(`Custom main_menu) Dmenu.[
+  Dmenu.menu ~title:"Should capture sound ?" ~misc ~on_exit:(`Custom main_menu) Dmenu.[
       entry ~style:`Active "墳 Yes" (fun () -> pulse_menu 0 "");
       entry ~style:`Urgent "婢 No" record_menu;
     ]
@@ -130,10 +130,9 @@ and pulse_menu _ _ =
     (List.map2 (fun id desc ->
          Dmenu.entry desc (record_menu ~sound:id)) ids descriptions)
   in
-  Dmenu.menu ~title:"Select an audio source" ~on_none:(`Custom ask_audio_menu)
-  ~on_unknown:(`Custom (fun _ _ -> record_menu ~sound:"default" ())) prompts
+  Dmenu.menu ~title:"Select an audio source" ~misc ~on_exit:(`Custom ask_audio_menu) prompts
 and record_menu ?sound () =
-  Dmenu.menu ~title:"Record a video" ~theme ~on_none:(`Custom ask_audio_menu) Dmenu.[
+  Dmenu.menu ~title:"Record a video" ~theme ~misc ~on_exit:(`Custom ask_audio_menu) Dmenu.[
       entry ((span "" "13" "1000")^"  Record region") (re sound (clip ()));
       entry ((span "" "13" "1000")^"  Record focused") (re sound (focused()));
       entry ((span "缾" "13" "1000")^"  Record select window") (re sound (select_window ()));

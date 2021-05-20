@@ -65,6 +65,7 @@ let video_running () =
   if last_exit () = 0 then Some pid else None
 
 let rename_video _ new_name =
+  if String.equal "" new_name then failwith "LOL";
   let home = Sys.getenv "HOME" in
   let full_path = home ^ "/" ^ new_name in
   mv default_path full_path |> run ;
@@ -83,7 +84,7 @@ let video_stop pid =
   else
     Dmenu.menu
       ~msg:"The video is in MP4 format. It will be placed into your home folder."
-      ~on_unknown:(`Custom rename_video) ~on_none:(`Custom abort)
+      ~on_unknown:rename_video ~on_exit:(`Custom abort)
       ~title:"File name" Dmenu.[entry ~style:`Urgent "Abort" (abort 0)]
 
 let pulse_menu () =

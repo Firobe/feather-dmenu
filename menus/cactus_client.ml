@@ -76,12 +76,13 @@ let modify step () =
 
 let custom_temp () =
   Dmenu.menu ~title:"Write a temperature" ~msg:"Expects a float"
-    ~on_unknown:(`Custom (fun _ str ->
-      let* temp = float_of_string_r str in
-      let* _ = set_goal temp in
-      notify (Printf.sprintf "Goal changed to: %g°C" temp);
-      Result.ok ()
-    )) []
+    ~on_unknown:(fun _ str ->
+        if String.equal "" str then failwith "LOL";
+        let* temp = float_of_string_r str in
+        let* _ = set_goal temp in
+        notify (Printf.sprintf "Goal changed to: %g°C" temp);
+        Result.ok ()
+      ) []
 
 let main =
   Dmenu.menu ~title:"Heater menu"
