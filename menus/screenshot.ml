@@ -106,7 +106,7 @@ let pulse_menu () =
 
 let video_menu () =
   Dmenu.menu ~title:"Should capture sound" Dmenu.[
-      entry " Yes" pulse_menu;
+      entry "墳 Yes" pulse_menu;
       entry "婢 No" (take_video)
     ]
 
