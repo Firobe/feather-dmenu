@@ -95,7 +95,6 @@ let select_output () = outputs() |. process "slurp" []
 
 let title = "Screenshoter"
 let theme = "~/.config/rofi/action.rasi"
-let yesno = "~/.config/rofi/yesno.rasi"
 
 let rec main_menu _ _ =
   Dmenu.menu ~title ~theme  Dmenu.[
@@ -111,7 +110,7 @@ and screenshot_menu () =
       entry ((span "" "11" "1000")^(span " " "13" "0")^" Capture select output") (cs (select_output()));
     ]
 and ask_audio_menu _ _ =
-  Dmenu.menu ~title:"Should capture sound ?" ~theme:yesno ~on_none:(`Custom main_menu) Dmenu.[
+  Dmenu.menu ~title:"Should capture sound ?" ~on_none:(`Custom main_menu) Dmenu.[
       entry ~style:`Active "墳 Yes" (fun () -> pulse_menu 0 "");
       entry ~style:`Urgent "婢 No" record_menu;
     ]
