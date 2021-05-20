@@ -4,6 +4,11 @@ open Feather_dmenu
 
 let (let*) = Result.bind
 
+(* Bind arrows to Enter and Escape *)
+let misc = ["-kb-move-char-back";"Control+b";"-kb-move-char-forward";
+            "Control+f";"-kb-accept-entry"; "Right,Control+j,Control+m,Return,KP_Enter";
+            "-kb-cancel";"Left,Escape,Control+g,Control+bracketleft" ]
+
 let notify txt =
   let success_icon = "/usr/share/icons/./Papirus/48x48/devices/camera-photo.svg"
   in process "notify-send"
@@ -71,7 +76,7 @@ let take_video ?sound () =
   notify "Starting the video. Run again to stop.";
   screencast ~sound args |> run ;
   let* _ = get_result ~expected:255 () "Video failed..." in
-  Dmenu.menu
+  Dmenu.menu ~misc
     ~msg:"The video is in MP4 format. It will be placed into your home folder."
     ~on_unknown:rename_video ~on_exit:(`Custom abort)
     ~title:"File name" Dmenu.[entry ~style:`Urgent "Abort" abort]
@@ -105,16 +110,16 @@ let rec pulse_menu () =
     (List.map2 (fun id desc ->
       Dmenu.entry desc (take_video ~sound:id)) ids descriptions)
   in
-  Dmenu.menu ~on_exit:(`Custom video_menu) ~title:"Select an audio source" prompts
+  Dmenu.menu ~misc ~on_exit:(`Custom video_menu) ~title:"Select an audio source" prompts
 
 and video_menu () =
-  Dmenu.menu ~on_exit:(`Custom menu) ~title:"Should capture sound" Dmenu.[
+  Dmenu.menu ~on_exit:(`Custom menu) ~title:"Should capture sound" ~misc Dmenu.[
       entry "墳 Yes" pulse_menu;
       entry "婢 No" (take_video)
     ]
 
 and menu () =
-  Dmenu.menu ~title:"Select an action (applies to zone or window)" Dmenu.[
+  Dmenu.menu ~title:"Select an action (applies to zone or window)" ~misc Dmenu.[
       entry "  Take a screenshot" take_screenshot;
       entry "  Take a video" video_menu
     ]
