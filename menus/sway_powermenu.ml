@@ -27,7 +27,7 @@ let lock () =
   get_result () "Action failed..."
 
 let bw () =
-  process "/home/thibault/Documents/clone/feather-dmenu/_build/default/sway_bw.exe   " [] |> run;
+  process "/home/thibault/Documents/clone/feather-dmenu/_build/default/sway_bw.exe" [] |> run;
   get_result () "Action failed..."
 
 let span str f r =
