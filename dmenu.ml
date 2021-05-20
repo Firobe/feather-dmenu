@@ -16,10 +16,16 @@ let gather_style select prompts =
     )
   |> String.concat ~sep:","
 
+let wrap_user_fn f =
+  try f ()
+  with e ->
+    let msg = "exception in user function -> " ^ (Exn.to_string_mach e) in
+    Result.fail (`Msg msg)
+
 let do_exit err_str = function
   | `Nothing -> Result.return ()
   | `Error -> Result.fail (`Msg err_str)
-  | `Custom f -> f ()
+  | `Custom f -> wrap_user_fn f
 
 let menu' title msg theme case on_exit on_unknown misc prompts =
   (* Concat choice\nchoice\nchoice... *)
@@ -43,11 +49,11 @@ let menu' title msg theme case on_exit on_unknown misc prompts =
     do_exit "No action selected" on_exit
   else
     match Option.(get_choice choice prompts >>= (fun a -> a.f)) with
-    | Some f -> f ()
+    | Some f -> wrap_user_fn f
     | None ->
       begin match on_unknown with
         | None -> Result.return ()
-        | Some f -> f code choice
+        | Some f -> wrap_user_fn (fun () -> f code choice)
       end
 
 let error txt =
