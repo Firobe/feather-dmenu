@@ -9,10 +9,10 @@ let notify txt =
   in process "notify-send"
     [ "-t"; "2000"; "Screenshoter"; "-i"; success_icon; txt ] |> run
 
-let get_result ok err =
-  match last_exit () with
-  | 0 -> Result.ok ok
-  | _ -> Result.error (`Msg err)
+let get_result ?(expected=0) ok err =
+  if last_exit () = expected then
+    Result.ok ok
+  else Result.error (`Msg err)
 
 let maim_format = "%wx%h+%x+%y"
 let ffmpeg_format = "-video_size %wx%h -grab_x %x -grab_y %y"
@@ -40,8 +40,6 @@ let take_screenshot () =
 let default_path = "/tmp/out.mp4"
 let delete_default = process "rm" ["-f"; default_path]
 let screencast ~sound geom =
-  (* Problem: feather tries (and fortunately fails) to kill ffmpeg
-   * at the end of the first run *)
   let audio_args = match sound with
     | None -> []
     | Some source -> ["-f"; "pulse"; "-i"; source]
@@ -52,42 +50,46 @@ let screencast ~sound geom =
       "-i"; ":0.0"; "-loglevel"; "error"; "-c:v"; "libx264";
       "-preset"; "ultrafast"; default_path ])
 
-let take_video ?sound () =
-  let* geometry = get_selection ffmpeg_format in
-  let args = String.split_on_char ' ' geometry in
-  screencast ~sound args |> run_bg ;
-  let* result = get_result
-      "Video started. Call again to stop." "Video failed..." in
-  notify result; Result.ok ()
-
-let video_running () =
-  let pid = process "pidof" ["ffmpeg"] |> collect_stdout in
-  if last_exit () = 0 then Some pid else None
-
 let rename_video _ new_name =
-  if String.equal "" new_name then failwith "LOL";
-  let home = Sys.getenv "HOME" in
-  let full_path = home ^ "/" ^ new_name in
-  mv default_path full_path |> run ;
-  notify ("Video saved at " ^ full_path) ;
-  Result.ok ()
+  if String.equal "" new_name then 
+    Result.error (`Msg "File name cannot be empty. Aborted.")
+  else
+    let home = Sys.getenv "HOME" in
+    let full_path = home ^ "/" ^ new_name in
+    mv default_path full_path |> run ;
+    notify ("Video saved at " ^ full_path) ;
+    Result.ok ()
 
 let abort () =
   delete_default |> run;
   notify "Video was aborted.";
   Result.ok ()
 
+let take_video ?sound () =
+  let* geometry = get_selection ffmpeg_format in
+  let args = String.split_on_char ' ' geometry in
+  notify "Starting the video. Run again to stop.";
+  screencast ~sound args |> run ;
+  let* _ = get_result ~expected:255 () "Video failed..." in
+  Dmenu.menu
+    ~msg:"The video is in MP4 format. It will be placed into your home folder."
+    ~on_unknown:rename_video ~on_exit:(`Custom abort)
+    ~title:"File name" Dmenu.[entry ~style:`Urgent "Abort" abort]
+
+let video_running () =
+  let pid = process "pidof" ["ffmpeg"] |> collect_stdout in
+  if last_exit () = 0 then Some pid else None
+
 let video_stop pid =
   process "kill" [ "-SIGINT"; pid] |> run;
   if last_exit () <> 0 then
     Result.error (`Msg "Error when trying to kill ffmpeg")
   else
-    Dmenu.menu
-      ~msg:"The video is in MP4 format. It will be placed into your home folder."
-      ~on_unknown:rename_video ~on_exit:(`Custom abort)
-      ~title:"File name" Dmenu.[entry ~style:`Urgent "Abort" abort]
+    Result.ok ()
 
-let pulse_menu () =
+
+(* MENUS *)
+let rec pulse_menu () =
   let ids =
     process "pactl" [ "list"; "short" ; "sources" ]
     |. cut ~d:'\t' 1 |> collect_lines
@@ -103,15 +105,15 @@ let pulse_menu () =
     (List.map2 (fun id desc ->
       Dmenu.entry desc (take_video ~sound:id)) ids descriptions)
   in
-  Dmenu.menu ~title:"Select an audio source" prompts
+  Dmenu.menu ~on_exit:(`Custom video_menu) ~title:"Select an audio source" prompts
 
-let video_menu () =
-  Dmenu.menu ~title:"Should capture sound" Dmenu.[
+and video_menu () =
+  Dmenu.menu ~on_exit:(`Custom menu) ~title:"Should capture sound" Dmenu.[
       entry "墳 Yes" pulse_menu;
       entry "婢 No" (take_video)
     ]
 
-let menu () =
+and menu () =
   Dmenu.menu ~title:"Select an action (applies to zone or window)" Dmenu.[
       entry "  Take a screenshot" take_screenshot;
       entry "  Take a video" video_menu
