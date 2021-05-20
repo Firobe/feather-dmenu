@@ -131,7 +131,8 @@ and pulse_menu _ _ =
     (List.map2 (fun id desc ->
          Dmenu.entry desc (record_menu ~sound:id)) ids descriptions)
   in
-  Dmenu.menu ~title:"Select an audio source" ~on_none:(`Custom ask_audio_menu) prompts
+  Dmenu.menu ~title:"Select an audio source" ~on_none:(`Custom ask_audio_menu)
+  ~on_unknown:(`Custom (fun _ _ -> record_menu ~sound:"default" ())) prompts
 and record_menu ?sound () =
   Dmenu.menu ~title:"Record a video" ~theme ~on_none:(`Custom ask_audio_menu) Dmenu.[
       entry ((span "" "13" "1000")^"  Record region") (re sound (clip ()));
