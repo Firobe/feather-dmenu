@@ -143,7 +143,7 @@ and record_menu ?sound () =
       entry ((span "" "11" "1000")^(span " " "13" "0")^" Record select output") (re sound (select_output()));
     ]
 
-let main =debug := true;
+let main =
   let rec_pid = rec_pid () in
   match last_exit () with
   | 0 -> stop rec_pid
