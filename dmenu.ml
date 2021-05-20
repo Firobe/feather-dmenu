@@ -21,7 +21,7 @@ let corner_case exit str err_str = function
   | `Error -> Result.fail (`Msg err_str)
   | `Custom f -> f exit str
 
-let menu' title msg theme on_none on_unknown misc prompts =
+let menu' title msg theme allow_custom case on_none on_unknown misc prompts =
   (* Concat choice\nchoice\nchoice... *)
   let input = prompts |> List.map ~f:(fun e -> e.label) |> String.concat ~sep:"\n" in
   (* Concat 1,3,4,... for urgent prompts *)
@@ -29,11 +29,13 @@ let menu' title msg theme on_none on_unknown misc prompts =
   let active = gather_style `Active prompts in
   let theme_l = match theme with None -> [] | Some t -> [ "-theme"; t ] in
   let msg_l = match msg with None -> [] | Some m -> [ "-mesg"; m ] in
+  let allow_custom = if allow_custom then "" else "-no-custom" in
+  let case = if case then "" else "-i" in
   let misc = match misc with None -> [] | Some m -> m in
   let choice =
     process "echo" [ "-e"; input ] |.
     process "rofi"
-      (theme_l @ msg_l @ misc @ [ "-markup-rows"; "-dmenu"; "-u"; urgents ;
+      (case :: allow_custom :: theme_l @ msg_l @ misc @ [ "-markup-rows"; "-dmenu"; "-u"; urgents ;
                                   "-a"; active; "-p"; title ])
     |> collect_stdout in
   if String.equal choice "" then
@@ -48,8 +50,8 @@ let error txt =
   process "rofi" [ "-markup"; "-e"; red_error ^ txt ] |> run
 
 let menu ?(title="Select an action") ?(on_none=`Nothing) ?(on_unknown=`Error)
-    ?msg ?theme ?misc prompts =
-  menu' title msg theme on_none on_unknown misc prompts
+    ?msg ?theme ?(allow_custom=false) ?(case=false) ?misc prompts =
+  menu' title msg theme allow_custom case on_none on_unknown misc prompts
 
 let catch_errors = function
   | Result.Ok () -> ()
