@@ -5,8 +5,25 @@
     (modules dmenu)
 )
 
+(include_subdirs unqualified)
+
 (executable
   (name example)
   (libraries feather_dmenu)
   (modules example)
+)
+(executable
+  (name cactus_client)
+  (libraries feather_dmenu)
+  (modules cactus_client)
+)
+(executable
+  (name screenshot)
+  (libraries feather_dmenu)
+  (modules screenshot)
+)
+(executable
+  (name shutdown)
+  (libraries feather_dmenu)
+  (modules shutdown)
 )
