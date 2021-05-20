@@ -27,3 +27,18 @@
   (libraries feather_dmenu)
   (modules shutdown)
 )
+(executable
+  (name sway_screenshots)
+  (libraries feather_dmenu)
+  (modules sway_screenshots)
+)
+(executable
+  (name sway_powermenu)
+  (libraries feather_dmenu)
+  (modules sway_powermenu)
+)
+(executable
+  (name sway_bw)
+  (libraries feather_dmenu)
+  (modules sway_bw)
+)
