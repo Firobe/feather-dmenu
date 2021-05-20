@@ -16,10 +16,10 @@ let gather_style select prompts =
     )
   |> String.concat ~sep:","
 
-let corner_case str err_str = function
+let corner_case exit str err_str = function
   | `Nothing -> Result.return ()
   | `Error -> Result.fail (`Msg err_str)
-  | `Custom f -> f str
+  | `Custom f -> f exit str
 
 let menu' title msg theme on_none on_unknown misc prompts =
   (* Concat choice\nchoice\nchoice... *)
@@ -37,11 +37,11 @@ let menu' title msg theme on_none on_unknown misc prompts =
                                   "-a"; active; "-p"; title ])
     |> collect_stdout in
   if String.equal choice "" then
-    corner_case choice "No action selected" on_none
+    corner_case (last_exit()) choice "No action selected" on_none
   else
     match Option.(get_choice choice prompts >>= (fun a -> a.f)) with
     | Some f -> f ()
-    | None -> corner_case choice "Don't know what to do" on_unknown
+    | None -> corner_case (last_exit()) choice "Don't know what to do" on_unknown
 
 let error txt =
   let red_error = "<span color='red'><b>Error: </b></span>" in
