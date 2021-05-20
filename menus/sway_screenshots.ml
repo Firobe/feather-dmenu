@@ -5,8 +5,8 @@ open Infix
 let (let*) = Result.bind
 
 let misc = ["-kb-move-char-back";"Control+b";"-kb-move-char-forward";
-            "Control+f";"-kb-accept-entry"; "Right,Return,KP_Enter";
-            "-kb-cancel";"Escape,Control+g,Control+bracketleft,Left" ]
+            "Control+f";"-kb-accept-entry"; "Right,Control+j,Control+m,Return,KP_Enter";
+            "-kb-cancel";"Left,Escape,Control+g,Control+bracketleft" ]
 
 let notify im txt =
   let icon =
@@ -101,9 +101,9 @@ let title = "Screenshoter"
 let theme = "~/.config/rofi/action.rasi"
 
 let rec main_menu () =
-  Dmenu.menu ~title ~theme  Dmenu.[
-      entry ~style:`Active ((span "" "13" "1000")^"  Take a screenshot !") screenshot_menu;
-      entry ~style:`Urgent ((span "" "12" "1000")^(span " " "13" "0")^" Record a video !") ask_audio_menu;
+  Dmenu.menu ~title ~theme ~misc Dmenu.[
+      entry ~style:`Active ((span "" "13" "0")^"  Take a screenshot !") screenshot_menu;
+      entry ~style:`Urgent (""^(span "  " "13" "0")^"Record a video !") ask_audio_menu;
     ]
 and screenshot_menu () =
   Dmenu.menu ~title:"Take a screenshot" ~theme ~misc ~on_exit:(`Custom main_menu) Dmenu.[

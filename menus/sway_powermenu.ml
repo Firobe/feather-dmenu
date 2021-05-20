@@ -30,18 +30,18 @@ let bw () =
   process "/home/thibault/Documents/clone/feather-dmenu/_build/default/sway_bw.exe" [] |> run;
   get_result () "Action failed..."
 
-let span str f r =
-  "<span font='"^f^"' rise='"^r^"'>"^str^"</span>"
+let span str f =
+  "<span rise='1000' font='"^f^"'>"^str^"</span>"
 
 let main =
   let title = "Powermenu" in
   let theme = "~/.config/rofi/action.rasi" in
   Dmenu.menu ~title ~theme Dmenu.[
-    entry ((span "" "13" "1000")^"  Lock")    lock;
-    entry ((span "望" "13" "1000")^"  Suspend") (systemctl ["suspend"]);
-    entry ((span "﫼" "13" "1000")^"  Log Out") exit;
-    entry ~style:`Urgent ((span "累" "14" "1000")^"  Reboot") (systemctl ["reboot"]);
-    entry ~style:`Urgent ((span " " "0.4" "1000")^(span "襤" "14" "1000")^"  Shutdown") (systemctl ["-i";"poweroff"]);
+    entry "  Lock" lock;
+    entry "望  Suspend" (systemctl ["suspend"]);
+    entry "﫼  Log Out" exit;
+    entry ((span "累" "13")^"  Reboot") ~style:`Urgent (systemctl ["reboot"]);
+    entry ((span "襤" "13")^"  Shutdown") ~style:`Urgent (systemctl ["-i";"poweroff"]);
     empty_row;
-    entry ~style:`Active ((span "輦" "13" "1000")^"  BitWarden") bw;
+    entry "輦  BitWarden" ~style:`Active bw;
   ] |> Dmenu.catch_errors
