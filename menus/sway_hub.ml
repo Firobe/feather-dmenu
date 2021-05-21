@@ -7,19 +7,19 @@ let get_result ok err =
   | _ -> Result.error (`Msg err)
 
 let bw () =
-  process "/home/thibault/Documents/clone/feather-dmenu/_build/default/sway_bw.exe" [] |> run;
+  process "sway_bw.exe" [] |> run;
   get_result () "Action failed..."
 
 let screen () =
-  process "/home/thibault/Documents/clone/feather-dmenu/_build/default/sway_screenshots.exe" [] |> run;
+  process "sway_screenshots.exe" [] |> run;
   get_result () "Action failed..."
 
 let power () =
-  process "/home/thibault/Documents/clone/feather-dmenu/_build/default/sway_powermenu.exe" [] |> run;
+  process "sway_powermenu.exe" [] |> run;
   get_result () "Action failed..."
 
 let wifi () =
-  process "/home/thibault/Documents/clone/feather-dmenu/_build/default/wifi.exe" [] |> run;
+  process "wifi.exe" [] |> run;
   get_result () "Action failed..."
 
 let span str f =
