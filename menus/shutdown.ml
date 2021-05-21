@@ -11,7 +11,7 @@ let action kind () =
   get_result () "Action failed..."
 
 let launch_heater_menu () =
-  process "cactus-client.ml" [] |> run;
+  process "cactus_client.exe" [] |> run;
   Result.ok ()
 
 let main =
