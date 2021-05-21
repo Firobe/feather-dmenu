@@ -25,34 +25,35 @@ let display_con () =
   let f str = not (String.equal "" str) in
   get_result ~f ret "Could not display connection list"
 
-let connect_to name ssid =
-  process "nmcli" ["--ask";"connection";"up";ssid] |> run;
-  get_result () ("Failed trying to connect to "^name)
+let connect_to ssid =
+  let ret = process "nmcli" ["connection";"up";ssid] |> collect_stdout in
+  get_result () ret
 
 let rec main_menu () =
   Dmenu.menu ~title ~theme ~misc Dmenu.[
-      entry ~style:`Active "Change wifi state" wifi_state_menu;
-      entry "Select wifi" wifi_select_menu;
+      entry ~style:`None "Change wifi state" wifi_state_menu;
+      entry ~style:`Active "Select wifi" wifi_select_menu;
     ]
 and wifi_state_menu () =
   Dmenu.menu ~title:"Wifi state" ~theme ~misc ~on_exit:(`Custom main_menu) Dmenu.[
-      entry ~style:`Active "Yes" (switch_wifi "on");
-      entry ~style:`Urgent "No" (switch_wifi "off");
+      entry ~style:`Active "直  Yes" (switch_wifi "on");
+      entry ~style:`Urgent "睊  No" (switch_wifi "off");
     ]
 and wifi_select_menu () =
   let* wifi_list = display_con () in
   let wifi_list = String.split wifi_list ~on:'\n' in
   let splitted_items =
     List.filter_map (List.tl_exn wifi_list) ~f:(fun s ->
-        let s = Str.global_replace (Str.regexp "[ ]+") " " s
+        let s =
+          Str.global_replace (Str.regexp "[ ]+") " " s
           |> String.split ~on:' ' in
-        if List.length s < 2 then None else
-        Some (List.nth_exn s 0, List.nth_exn s 1)
+        if List.length s < 2 then None
+        else Some (List.nth_exn s 0, List.nth_exn s 1)
       )
   in
   Dmenu.menu ~title:"Select wifi" ~theme ~misc ~on_exit:(`Custom main_menu)
     (List.map splitted_items ~f:(fun (name,ssid) ->
-         Dmenu.entry name (fun () -> connect_to name ssid)
+         Dmenu.entry name (fun () -> connect_to ssid)
        ))
 
 let main =
