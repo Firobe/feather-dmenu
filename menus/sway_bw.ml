@@ -38,33 +38,22 @@ let get_result ?(f=fun _ -> true) ok err =
   | 0 -> if f ok then Result.return ok else Result.fail (`Msg err)
   | _ -> Result.fail (`Msg err)
 
+let not_empty str = not (String.is_empty str)
+
 let array_from_name name items =
   let str =
     echo items
     |. process "jq" ["-r"; ". | map(select((.name == \""^name^"\") and (.type == 1)))"]
     |> collect_stdout
-  in get_result str "Could not convert name to array"
+  in
+  get_result str "Could not convert name to array"
 
 let load_items session =
   let str =
     process "bw" ["list"; "items"; "--session"; session]
     |> write_stderr_to devnull |> collect_stdout
   in
-  let f str = not (String.equal "" str) in
-  get_result ~f str "Could not load items"
-
-let show_items exec_action session =
-  let* items = load_items session in
-  let items_names =
-    echo items |.
-    process "jq" ["-r";".[] | select( has( \"login\" ) ) | \"\\(.name)\""]
-    |> collect_stdout
-  in
-  let lines = String.split items_names ~on:'\n' in
-  let title = "Name" in
-  Dmenu.menu ~title ~msg ~misc:actions
-    (List.map lines ~f:(fun l ->
-         Dmenu.entry l (fun () -> exec_action session items (last_exit()) l)))
+  get_result ~f:not_empty str "Could not load items"
 
 let copy str =
   process "echo" ["-n";str] |. process "wl-copy" [] |> run;
@@ -88,85 +77,113 @@ let clear old =
   else Result.return ()
 
 let get_pass item =
-  let pass = echo item |. process "jq" ["-r";".[0].login.password"] |> collect_stdout in
+  let pass =
+    echo item |. process "jq" ["-r";".[0].login.password"]
+    |> collect_stdout
+  in
   get_result pass "Could not get password"
 
 let copy_password name items =
   let* item = array_from_name name items in
   let* pass = get_pass item in
   let* _ = copy pass in
-  let body = if clear_time > 0 then ("Will be cleared in "^(Int.to_string clear_time)^"seconds.") else "" in
+  let body =
+    if clear_time > 0 then
+      ("Will be cleared in "^(Int.to_string clear_time)^"seconds.")
+    else ""
+  in
   notify (name^" copied !") body;
   if clear_time > 0 then clear pass
   else Result.return ()
 
-let lock_vault () =
-  process "keyctl" ["purge";"user";"bw_session"]
-  |> stderr_to_stdout |> write_stdout_to devnull |> run;
-  let* _ = get_result () "Could not lock the vault" in
-  notify "Vault locked" "";
-  Result.return ()
+let get_session key_id =
+  let session = process "keyctl" ["pipe";key_id] |> collect_stdout in
+  get_result session "Could not get session"
 
-let reset session =
+let sync key_id =
+  let* session = get_session key_id in
   process "bw" ["sync";"--session";session]
   |> stderr_to_stdout |> write_stdout_to devnull |> run;
   get_result () "Failed to sync Bitwarden"
 
-let rec open_session session =
-  show_items on_rofi_exit session
-and on_rofi_exit session items (code:int) choice =
-  match code with
-  | 0 -> copy_password choice items
-  | 10 -> let* _ = reset session in open_session session
-  | 11 -> lock_vault ()
-  | _ -> Result.fail (`Msg ("Rofi exited with error : "^(Int.to_string code)))
-
 let set_timeout key_id =
-  if auto_lock > 0 then
+  if auto_lock > 0 then begin
     process "keyctl" ["timeout";key_id;(Int.to_string auto_lock)] |> run;
-  let session = process "keyctl" ["pipe";key_id] |> collect_stdout in
-  open_session session
+    get_result () "Could not set session timeout"
+  end
+  else Result.return ()
 
-let main_menu open_session =
+let check_password pwd =
+  let str =
+    process "bw" ["unlock";pwd] |> write_stderr_to devnull
+    |> collect_stdout
+  in
+  let* _ = get_result ~f:not_empty str "Invalid master password" in
+  let key_id =
+    echo str |. process "grep" ["export"]
+    |. process "sed" [ "-E"; "s/.*export BW_SESSION=\"(.*==)\"$/\\1/"]
+    |. process "keyctl" ["padd";"user";"bw_session";"@u"]
+    |> collect_stdout
+  in
+  get_result key_id "Could not unlock vault"
+
+let rec show_items ?key_id ?pwd () =
+  let* key_id =
+    match pwd,key_id with
+    | None,Some key -> Result.return key
+    | Some pwd, _ -> check_password pwd
+    | _ -> assert false
+  in
+  let* _ = set_timeout key_id in
+  let* session = get_session key_id in
+  let* items = load_items session in
+  let items_names =
+    echo items |.
+    process "jq" ["-r";".[] | select( has( \"login\" ) ) | \"\\(.name)\""]
+    |> collect_stdout
+  in
+  let* _ = get_result () "Could not extract names" in
+  let lines = String.split items_names ~on:'\n' in
+  let title = "Name" in
+  Dmenu.menu ~title ~msg ~misc:actions
+    (List.map lines ~f:(fun l ->
+         Dmenu.entry l (fun () -> on_rofi_exit key_id items (last_exit()) l)))
+
+and main_menu ?(msg="Vault locked !") () =
   let title = "Master password" in
   let theme = "~/.config/rofi/pwd.rasi" in
   let misc = ["-password"; "-lines"; "0"] in
-  let check_password _ str =
-    let str =
-      process "bw" ["unlock";str] |> write_stderr_to devnull |> collect_stdout
-    in
-    if String.equal str "" then
-      Result.fail (`Msg "Invalid master password")
-    else
-      let session =
-        echo str |. process "grep" ["export"]
-        |. process "sed" [ "-E"; "s/.*export BW_SESSION=\"(.*==)\"$/\\1/"]
-        |> collect_stdout
-      in
-      match last_exit () with
-      | 0 when not (String.equal "" session) -> open_session session
-      | _ -> Result.fail (`Msg "Could not unlock vault")
-  in
-  Dmenu.menu ~title ~theme ~misc ~on_unknown:check_password []
+  Dmenu.menu ~title ~theme ~msg ~misc
+    ~on_unknown:(fun _ pwd -> show_items ~pwd ()) []
+
+and on_rofi_exit key_id items code choice =
+  match code with
+  | 0 -> copy_password choice items
+  | 10 -> let* _ = sync key_id in show_items ~key_id ()
+  | 11 -> lock_vault ()
+  | _ -> Result.fail (`Msg ("Rofi exited with error : "^(Int.to_string code)))
+
+and lock_vault () =
+  process "keyctl" ["purge";"user";"bw_session"]
+  |> stderr_to_stdout |> write_stdout_to devnull |> run;
+  let* _ = get_result () "Could not lock the vault" in
+  main_menu ()
 
 let main () =
   if auto_lock = 0 then begin
     process "keyctl" ["purge";"user";"bw_session"] |>
     stderr_to_stdout |> write_stdout_to devnull |> run;
-    main_menu (fun session -> open_session session)
+    main_menu ()
   end
   else
     let key_id =
       process "keyctl" ["request";"user";"bw_session"]
       |> write_stderr_to devnull |> collect_stdout
     in
-    if last_exit () <> 0 then begin
-      main_menu (fun session ->
-          echo session |. process "keyctl" ["padd";"user";"bw_session";"@u"]
-          |> collect_stdout |> set_timeout)
-    end
+    if last_exit () <> 0 then
+      main_menu ()
     else
-      set_timeout key_id
+      show_items ~key_id ()
 
 let () =
   match main () with
