@@ -25,10 +25,14 @@ let wifi () =
 let span str f =
   "<span rise='1000' font='"^f^"'>"^str^"</span>"
 
+let misc = ["-kb-move-char-back";"Control+b";"-kb-move-char-forward";
+            "Control+f";"-kb-accept-entry"; "Right,Control+j,Control+m,Return,KP_Enter";
+            "-kb-cancel";"Left,Escape,Control+g,Control+bracketleft" ]
+
 let main () =
   let title = "Hub" in
   let theme = "~/.config/rofi/action.rasi" in
-  Dmenu.menu ~title ~theme Dmenu.[
+  Dmenu.menu ~title ~misc ~theme Dmenu.[
     entry (""^(span " " "3")^"  Screenshoter menu") screen;
     entry ((span " " "1")^(span "襤" "13")^"  Power menu") ~style:`Urgent power;
     entry ("直"^(span " " "3")^"  Wifi menu") ~style:`Active wifi;
