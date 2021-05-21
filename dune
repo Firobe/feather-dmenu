@@ -42,3 +42,8 @@
   (libraries feather_dmenu)
   (modules sway_bw)
 )
+(executable
+  (name wifi)
+  (libraries str feather_dmenu)
+  (modules wifi)
+)
