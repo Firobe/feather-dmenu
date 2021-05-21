@@ -16,7 +16,7 @@ let notify txt =
 let send_raspi ?(hostname="raspi") ?(port=2713) command =
   let expect_file = Printf.sprintf {|
       log_user 0
-      set timeout 10
+      set timeout 5
       spawn telnet %s %d
       expect "> "
       send "%s\n"
@@ -28,7 +28,7 @@ let send_raspi ?(hostname="raspi") ?(port=2713) command =
     |} hostname port command in
   let lines = echo expect_file |. process "expect" [ "-" ] |> collect_lines in
   if Stdlib.(List.length lines < 2) then
-    Result.error (`Msg "expect did not return answer")
+    Result.error (`Msg "could not reach Raspberry Pi or cactus server.")
   else
     get_result (List.nth lines 1) "expect failed"
 

@@ -44,7 +44,7 @@ let take_screenshot () =
 (* Video *)
 let default_path = "/tmp/out.mp4"
 let delete_default = process "rm" ["-f"; default_path]
-let screencast ~sound geom =
+let screencast ~sound ~display geom =
   let audio_args = match sound with
     | None -> []
     | Some source -> ["-f"; "pulse"; "-i"; source]
@@ -52,7 +52,7 @@ let screencast ~sound geom =
   delete_default &&.
   process "ffmpeg" (audio_args @ [
       "-f"; "x11grab"; "-framerate"; "60"] @ geom @ [
-      "-i"; ":0.0"; "-loglevel"; "error"; "-c:v"; "libx264";
+      "-i"; display; "-loglevel"; "error"; "-c:v"; "libx264";
       "-preset"; "ultrafast"; default_path ])
 
 let rename_video _ new_name =
@@ -74,7 +74,10 @@ let take_video ?sound () =
   let* geometry = get_selection ffmpeg_format in
   let args = String.split_on_char ' ' geometry in
   notify "Starting the video. Run again to stop.";
-  screencast ~sound args |> run ;
+  let* display =
+    Sys.getenv_opt "DISPLAY"
+    |> Option.to_result ~none:(`Msg "Could not find DISPLAY") in
+  screencast ~sound ~display args |> run ;
   let* _ = get_result ~expected:255 () "Video failed..." in
   Dmenu.menu ~misc
     ~msg:"The video is in MP4 format. It will be placed into your home folder."
