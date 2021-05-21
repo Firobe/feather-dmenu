@@ -26,10 +26,6 @@ let lock () =
   process "swaylock-blur" [] |> run;
   get_result () "Action failed..."
 
-let bw () =
-  process "/home/thibault/Documents/clone/feather-dmenu/_build/default/sway_bw.exe" [] |> run;
-  get_result () "Action failed..."
-
 let span str f =
   "<span rise='1000' font='"^f^"'>"^str^"</span>"
 
@@ -42,6 +38,4 @@ let main =
     entry "﫼  Log Out" exit;
     entry ((span "累" "13")^"  Reboot") ~style:`Urgent (systemctl ["reboot"]);
     entry ((span "襤" "13")^"  Shutdown") ~style:`Urgent (systemctl ["-i";"poweroff"]);
-    empty_row;
-    entry "輦  BitWarden" ~style:`Active bw;
   ] |> Dmenu.catch_errors

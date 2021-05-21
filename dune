@@ -28,6 +28,11 @@
   (modules shutdown)
 )
 (executable
+  (name sway_hub)
+  (libraries feather_dmenu)
+  (modules sway_hub)
+)
+(executable
   (name sway_screenshots)
   (libraries feather_dmenu)
   (modules sway_screenshots)
