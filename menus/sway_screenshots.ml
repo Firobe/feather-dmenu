@@ -91,8 +91,10 @@ let stop pid =
   | 0 -> ()
   | _ -> Dmenu.error "Error when trying to kill wf-recorder"
 
-let span str f r =
-  "<span font='"^f^"' rise='"^r^"'>"^str^"</span>"
+let rec span ?(b=false) ?(a=false) str f =
+  let b = if b then span " " "2" else "" in
+  let a = if a then span " " "2" else "" in
+  b^"<span font='"^f^"' rise='1000'>"^str^"</span>"^a
 
 let select_window () = windows() |. process "slurp" []
 let select_output () = outputs() |. process "slurp" []
@@ -102,21 +104,21 @@ let theme = "~/.config/rofi/action.rasi"
 
 let rec main_menu () =
   Dmenu.menu ~title ~theme ~misc Dmenu.[
-      entry ~style:`Active ((span "" "13" "0")^"  Take a screenshot !") screenshot_menu;
-      entry ~style:`Urgent (""^(span "  " "13" "0")^"Record a video !") ask_audio_menu;
+      entry ~style:`None ((span "" "13")^"  Take a screenshot !") screenshot_menu;
+      entry ~style:`Urgent ((span ~a:true "" "12")^"  Record a video !") ask_audio_menu;
     ]
 and screenshot_menu () =
   Dmenu.menu ~title:"Take a screenshot" ~theme ~misc ~on_exit:(`Custom main_menu) Dmenu.[
-      entry ((span "" "11" "1000")^(span " " "13" "0")^" Capture fullscreen") (cs (outputs()));
-      entry ((span "" "13" "1000")^"  Capture region") (cs (clip ()));
-      entry ((span "" "13" "1000")^"  Capture focused") (cs (focused()));
-      entry ((span "缾" "13" "1000")^"  Capture select window") (cs (select_window ()));
-      entry ((span "" "11" "1000")^(span " " "13" "0")^" Capture select output") (cs (select_output()));
+      entry ((span ~a:true "" "11")^(span " " "2")^"  Capture fullscreen") (cs (outputs()));
+      entry ((span ~a:true "" "13")^"  Capture region") (cs (clip ()));
+      entry ((span ~b:true "" "13")^"  Capture focused") (cs (focused()));
+      entry ((span ~b:true "缾" "13")^"  Capture select window") (cs (select_window ()));
+      entry ((span ~b:true ~a:true "" "11")^"  Capture select output") (cs (select_output()));
     ]
 and ask_audio_menu () =
   Dmenu.menu ~title:"Should capture sound ?" ~misc ~on_exit:(`Custom main_menu) Dmenu.[
-      entry ~style:`Active "墳 Yes" pulse_menu;
-      entry ~style:`Urgent "婢 No" record_menu;
+      entry ~style:`None ((span "墳" "13")^"  Yes") pulse_menu;
+      entry ~style:`Urgent ((span "婢" "13")^"  No") record_menu;
     ]
 and pulse_menu () =
   let ids =
@@ -137,10 +139,10 @@ and pulse_menu () =
   Dmenu.menu ~title:"Select an audio source" ~misc ~on_exit:(`Custom ask_audio_menu) prompts
 and record_menu ?sound () =
   Dmenu.menu ~title:"Record a video" ~theme ~misc ~on_exit:(`Custom ask_audio_menu) Dmenu.[
-      entry ((span "" "13" "1000")^"  Record region") (re sound (clip ()));
-      entry ((span "" "13" "1000")^"  Record focused") (re sound (focused()));
-      entry ((span "缾" "13" "1000")^"  Record select window") (re sound (select_window ()));
-      entry ((span "" "11" "1000")^(span " " "13" "0")^" Record select output") (re sound (select_output()));
+      entry ((span ~a:true "" "13")^"  Record region") (re sound (clip ()));
+      entry ((span ~b:true "" "13")^"  Record focused") (re sound (focused()));
+      entry ((span ~b:true "缾" "13")^"  Record select window") (re sound (select_window ()));
+      entry ((span ~b:true ~a:true "" "11")^"  Record select output") (re sound (select_output()));
     ]
 
 let main =

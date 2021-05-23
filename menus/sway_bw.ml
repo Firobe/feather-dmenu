@@ -149,7 +149,7 @@ let rec show_items ?key_id ?pwd () =
     (List.map lines ~f:(fun l ->
          Dmenu.entry l (fun () -> on_rofi_exit key_id items (last_exit()) l)))
 
-and main_menu ?(msg="Vault locked !") () =
+and main_menu ?(msg="Unlock your vault") () =
   let title = "Master password" in
   let theme = "~/.config/rofi/pwd.rasi" in
   let misc = ["-password"; "-lines"; "0"] in
@@ -167,7 +167,7 @@ and lock_vault () =
   process "keyctl" ["purge";"user";"bw_session"]
   |> stderr_to_stdout |> write_stdout_to devnull |> run;
   let* _ = get_result () "Could not lock the vault" in
-  main_menu ()
+  main_menu ~msg:"Vault locked !" ()
 
 let main () =
   if auto_lock = 0 then begin

@@ -33,10 +33,10 @@ let main () =
   let title = "Hub" in
   let theme = "~/.config/rofi/action.rasi" in
   Dmenu.menu ~title ~misc ~theme Dmenu.[
-    entry (""^(span " " "3")^"  Screenshoter menu") screen;
-    entry ((span " " "1")^(span "襤" "13")^"  Power menu") ~style:`Urgent power;
-    entry ("直"^(span " " "3")^"  Wifi menu") ~style:`Active wifi;
-    entry ((span " " "1")^"輦  BitWarden menu") ~style:`Active bw;
+    entry (""^(span " " "2")^"  Screenshoter menu") screen;
+    entry ((span " " "1.5")^(span "襤" "13")^"  Power menu") ~style:`Urgent power;
+    entry ("直"^(span " " "4")^"  Wifi menu") ~style:`Active wifi;
+    entry ((span " " "2")^"輦  Password menu") ~style:`Active bw;
   ]
 
 let main = main () |> Dmenu.catch_errors
