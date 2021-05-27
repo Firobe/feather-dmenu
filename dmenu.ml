@@ -1,10 +1,11 @@
 open Feather
 open Base
+open Infix
 
 type 'e prompt = {
   label: string;
   style: [`Urgent | `Active | `None];
-  f: (unit -> (unit, 'e) Result.t) option;
+  f: ((string,string) output -> (unit, 'e) Result.t) option;
 }
 
 let get_choice input prompts =
@@ -38,22 +39,21 @@ let menu' title msg theme case on_exit on_unknown misc prompts =
   let allow_custom = match on_unknown with None -> "-no-custom" | Some _ -> "" in
   let case = if case then "" else "-i" in
   let misc = match misc with None -> [] | Some m -> m in
-  let choice =
+  let out =
     process "echo" [ "-e"; input ] |.
     process "rofi"
       (case :: allow_custom :: theme_l @ msg_l @ misc @
        [ "-markup-rows"; "-dmenu"; "-u"; urgents ; "-a"; active; "-p"; title ])
-    |> collect_stdout in
-  let code = last_exit () in
-  if String.equal choice "" && code = 1 then
+    |> collect Feather.(stdout <+> stderr) in
+  if String.equal out.stdout "" && out.status = 1 then
     do_exit "No action selected" on_exit
   else
-    match Option.(get_choice choice prompts >>= (fun a -> a.f)) with
-    | Some f -> wrap_user_fn f
+    match Option.(get_choice out.stdout prompts >>= (fun a -> a.f)) with
+    | Some f -> wrap_user_fn (fun () -> f out)
     | None ->
       begin match on_unknown with
         | None -> Result.return ()
-        | Some f -> wrap_user_fn (fun () -> f code choice)
+        | Some f -> wrap_user_fn (fun () -> f out)
       end
 
 let error txt =
