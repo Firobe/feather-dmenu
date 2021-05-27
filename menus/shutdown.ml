@@ -7,7 +7,7 @@ let get_result ok err out =
   | _ -> Result.error (`Msg err)
 
 let action kind _ =
-  process "i3exit" [ kind ] |> collect (fun id -> id)
+  process "i3exit" [ kind ] |> collect only_status
   |> get_result () "Action failed..."
 
 let launch_heater_menu _ =

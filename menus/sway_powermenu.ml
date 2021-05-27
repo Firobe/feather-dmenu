@@ -16,15 +16,15 @@ let get_result ok err out =
   | _ -> Result.error (`Msg err)
 
 let systemctl args _ =
-  process "systemctl" args |> collect (fun id -> id)
+  process "systemctl" args |> collect only_status
   |> get_result () "Action failed..."
 
 let exit _ =
-  process "swaymsg" ["exit"] |> collect (fun id -> id)
+  process "swaymsg" ["exit"] |> collect only_status
   |> get_result () "Action failed..."
 
 let lock _ =
-  process "swaylock-blur" [] |> collect (fun id -> id)
+  process "swaylock-blur" [] |> collect only_status
   |> get_result () "Action failed..."
 
 let span str f =

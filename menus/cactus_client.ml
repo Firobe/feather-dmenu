@@ -3,10 +3,11 @@ open Feather_dmenu
 
 let (let*) = Result.bind
 
-let get_result ok err out =
-  match out.status with
-  | 0 -> Result.ok ok
-  | _ -> Result.error (`Msg err)
+let get_result ?(expected=0) f_ok f_err out =
+  if out.status = expected then
+    Result.ok (f_ok out)
+  else Result.error (`Msg (f_err out))
+let just x _ = x
 
 let notify txt =
   let success_icon ="/usr/share/icons/gnome/32x32/status/info.png" in
@@ -26,11 +27,9 @@ let send_raspi ?(hostname="raspi") ?(port=2713) command =
       send "exit\n"
       expect
     |} hostname port command in
-  let out = echo expect_file |. process "expect" [ "-" ] |> collect stdout_lines in
-  if Stdlib.(List.length out.stdout < 2) then
-    Result.error (`Msg "could not reach Raspberry Pi or cactus server.")
-  else
-    get_result (List.nth out.stdout 1) "expect failed" out
+  echo expect_file |. process "expect" [ "-" ]
+  |> collect stdout_lines
+  |> get_result (fun {stdout;_} -> List.nth stdout 1) (just "Raspi communication failure")
 
 let float_of_string_r x =
   float_of_string_opt x |> Option.to_result ~none:(`Msg "Not a float")

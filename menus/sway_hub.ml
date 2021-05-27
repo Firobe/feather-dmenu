@@ -7,24 +7,24 @@ let get_result ok err out =
   | _ -> Result.error (`Msg err)
 
 let bw _ =
-  process "sway_bw.exe" [] |> collect (fun id -> id)
+  process "sway_bw.exe" [] |> collect only_status
   |> get_result () "Action failed..."
 
 let screen _ =
-  process "sway_screenshots.exe" [] |> collect (fun id -> id)
+  process "sway_screenshots.exe" [] |> collect only_status
   |> get_result () "Action failed..."
 
 let power _ =
-  process "sway_powermenu.exe" [] |> collect (fun id -> id)
+  process "sway_powermenu.exe" [] |> collect only_status
   |> get_result () "Action failed..."
 
 let wifi _ =
-  process "wifi.exe" [] |> collect (fun id -> id)
+  process "wifi.exe" [] |> collect only_status
   |> get_result () "Action failed..."
 
 let app _ =
   process "rofi" ["-combi-modi";"drun#run";"-show";"combi";"-display-combi";"App launcher"]
-  |> collect (fun id -> id) |> get_result () "Action failed..."
+  |> collect only_status |> get_result () "Action failed..."
 
 let span str f =
   "<span font='"^f^"'>"^str^"</span>"

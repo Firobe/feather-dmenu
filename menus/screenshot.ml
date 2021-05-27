@@ -14,20 +14,22 @@ let notify txt =
   in process "notify-send"
     [ "-t"; "2000"; "Screenshoter"; "-i"; success_icon; txt ] |> run
 
-let get_result ?(expected=0) ok err out =
+let get_result ?(expected=0) f_ok f_err out =
   if out.status = expected then
-    Result.ok ok
-  else Result.error (`Msg err)
+    Result.ok (f_ok out)
+  else Result.error (`Msg (f_err out))
+let get_stdout {stdout; _} = stdout
+let get_stderr {stderr; _} = stderr
+let just x _ = x
 
 let maim_format = "%wx%h+%x+%y"
 let ffmpeg_format = "-video_size %wx%h -grab_x %x -grab_y %y"
 
 let get_selection form =
-  let out =
     process "slop" [ "--highlight"; "--bordersize=3";
                      "--color=0.3,0.4,0.6,0.4"; "-f"; form ]
-    |> collect (stdout <+> stderr) in
-  get_result out.stdout out.stderr out
+    |> collect (stdout <+> stderr)
+    |> get_result get_stdout get_stderr
 
 (* Screenshot *)
 let screenshot geom =
@@ -40,8 +42,8 @@ let take_screenshot _ =
   let* geometry = get_selection maim_format in
   let* result =
     screenshot geometry |. clipboard_img >! devnull
-    |> collect (fun id -> id)
-    |> get_result "Image copied into clipboard" "Screenshot failed..."
+    |> collect only_status
+    |> get_result (just "Image copied into clipboard") (just "Screenshot failed...")
   in notify result; Result.ok ()
 
 (* Video *)
@@ -81,8 +83,8 @@ let take_video ?sound _ =
     Sys.getenv_opt "DISPLAY"
     |> Option.to_result ~none:(`Msg "Could not find DISPLAY") in
   let* _ =
-    screencast ~sound ~display args |> collect (fun id -> id)
-    |> get_result ~expected:255 () "Video failed..." in
+    screencast ~sound ~display args |> collect only_status
+    |> get_result ~expected:255 (just ()) (just "Video failed...") in
   Dmenu.menu ~misc
     ~msg:"The video is in MP4 format. It will be placed into your home folder."
     ~on_unknown:rename_video ~on_exit:(`Custom abort)
@@ -93,12 +95,8 @@ let video_running () =
   if out.status = 0 then Some out.stdout else None
 
 let video_stop pid =
-  let out = process "kill" [ "-SIGINT"; pid] |> collect (fun id -> id) in
-  if out.status <> 0 then
-    Result.error (`Msg "Error when trying to kill ffmpeg")
-  else
-    Result.ok ()
-
+  process "kill" [ "-SIGINT"; pid] |> collect only_status
+  |> get_result (just ()) (just "Error when trying to kill ffmpeg")
 
 (* MENUS *)
 let rec pulse_menu _ =

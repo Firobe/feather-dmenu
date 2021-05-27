@@ -57,7 +57,7 @@ let load_items session =
   get_result_stdout ~f:not_empty cmd "Could not load items"
 
 let copy str =
-  process "echo" ["-n";str] |. process "wl-copy" [] |> collect (fun id -> id)
+  process "echo" ["-n";str] |. process "wl-copy" [] |> collect only_status
   |> get_result () "Could not copy"
 
 let paste () =
@@ -65,14 +65,14 @@ let paste () =
   get_result_stdout cmd "Could not paste"
 
 let sleep time =
-  process "sleep" [time] |> collect (fun id -> id)
+  process "sleep" [time] |> collect only_status
   |> get_result () "Could not sleep"
 
 let clear old =
   let* _ = sleep (Int.to_string clear_time) in
   let* curr = paste () in
   if String.equal curr old then begin
-    process "wl-copy" ["--clear"] |> collect (fun id -> id)
+    process "wl-copy" ["--clear"] |> collect only_status
     |> get_result () "Could not clear"
   end
   else Result.return ()
@@ -107,7 +107,7 @@ let sync key_id =
 let set_timeout key_id =
   if auto_lock > 0 then begin
     process "keyctl" ["timeout";key_id;(Int.to_string auto_lock)]
-    |> collect (fun id -> id) |> get_result () "Could not set session timeout"
+    |> collect only_status |> get_result () "Could not set session timeout"
   end
   else Result.return ()
 

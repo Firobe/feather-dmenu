@@ -55,7 +55,7 @@ let get_title () =
     Result.return msg
 
 let switch_wifi state =
-  process "nmcli" ["radio";"wifi";state] |> collect (fun id -> id)
+  process "nmcli" ["radio";"wifi";state] |> collect only_status
   |> get_result () ("Switch wifi to "^state^" failed :/")
 
 let display_con () =
@@ -120,9 +120,9 @@ and connect_to ?pwd name =
         let out =
           process "nmcli" ["--ask";"dev";"wifi";"con";name]
           |> collect Feather.stdout in
-        echo (out.stdout^":"^Int.to_string out.status) |> collect (fun id -> id)
+        echo (out.stdout^":"^Int.to_string out.status) |> collect only_status
       | Some pwd -> echo pwd |. process "nmcli" ["--ask";"dev";"wifi";"con";name]
-                    |> collect (fun id -> id)
+                    |> collect only_status
     end
   in
   match out.status with

@@ -63,7 +63,7 @@ let cs cmd _ =
   let* geometry = get_selection cmd in
   let* result =
     process "grim" [ "-g"; geometry; filename_screen ] &&. copy filename_screen
-    |> collect (fun id -> id) |> get_result
+    |> collect only_status |> get_result
       (Printf.sprintf "Screenshot saved to %s and copied to clipboard!" target_screen)
       ("Action failed...")
   in
@@ -79,7 +79,7 @@ let re sound cmd _ =
   let* geometry = get_selection cmd in
   let* result =
     process "wf-recorder" (audio @ ["-g"; geometry; "-f"; filename_record])
-    &&. copy filename_record |> collect (fun id -> id) |> get_result
+    &&. copy filename_record |> collect only_status |> get_result
       (Printf.sprintf "Record saved to %s and copied to clipboard!" target_videos)
       ("Action failed...")
   in
@@ -92,7 +92,7 @@ let rec_pid () =
   process "pidof" ["wf-recorder"] |> collect stdout
 
 let stop pid =
-  let out = process "kill" ["-SIGINT";pid] |> collect (fun id -> id) in
+  let out = process "kill" ["-SIGINT";pid] |> collect only_status in
   match out.status with
   | 0 -> ()
   | _ -> Dmenu.error "Error when trying to kill wf-recorder"
