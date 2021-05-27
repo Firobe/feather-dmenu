@@ -47,25 +47,25 @@ let filename_record = target_videos ^ "/vid-" ^ (get_date()).stdout ^ ".mp4"
 
 let copy file = process "wl-copy" [] < file
 
-let () = debug := true
-
-
-let get_result ok err out =
-  match out.status with
-  | 0 -> Result.ok ok
-  | _ -> Result.error (`Msg err)
+let get_result ?(expected=0) f_ok f_err out =
+  if out.status = expected then
+    Result.ok (f_ok out)
+  else Result.error (`Msg (f_err out))
+let get_stdout {stdout; _} = stdout
+let get_stderr {stderr; _} = stderr
+let just x _ = x
 
 let get_selection cmd =
-  let out = cmd |> collect (stdout <+> stderr) in
-  get_result out.stdout out.stderr out
+  cmd |> collect (stdout <+> stderr)
+  |> get_result get_stdout get_stderr
 
 let cs cmd _ =
   let* geometry = get_selection cmd in
   let* result =
     process "grim" [ "-g"; geometry; filename_screen ] &&. copy filename_screen
     |> collect only_status |> get_result
-      (Printf.sprintf "Screenshot saved to %s and copied to clipboard!" target_screen)
-      ("Action failed...")
+      (just @@ Printf.sprintf "Screenshot saved to %s and copied to clipboard!" target_screen)
+      (just "Action failed...")
   in
   notify (Some filename_screen) result;
   Result.ok ()
@@ -80,8 +80,8 @@ let re sound cmd _ =
   let* result =
     process "wf-recorder" (audio @ ["-g"; geometry; "-f"; filename_record])
     &&. copy filename_record |> collect only_status |> get_result
-      (Printf.sprintf "Record saved to %s and copied to clipboard!" target_videos)
-      ("Action failed...")
+      (just @@ Printf.sprintf "Record saved to %s and copied to clipboard!" target_videos)
+      (just "Action failed...")
   in
   notify None result;
   Result.ok ()
@@ -89,13 +89,11 @@ let re sound cmd _ =
 let clip () = process "slurp" ["-d";"-b00000044";"-c0092dcff";"-w 2"]
 
 let rec_pid () =
-  process "pidof" ["wf-recorder"] |> collect stdout
+  process "pidof" ["wf-recorder"]
 
 let stop pid =
-  let out = process "kill" ["-SIGINT";pid] |> collect only_status in
-  match out.status with
-  | 0 -> ()
-  | _ -> Dmenu.error "Error when trying to kill wf-recorder"
+  process "kill" ["-SIGINT";pid] |> collect only_status
+  |> get_result (just ()) (just "Killing wf-recorder failed")
 
 let rec span ?(b=false) ?(a=false) str f =
   let b = if b then span " " "2" else "" in
@@ -152,7 +150,7 @@ and record_menu ?sound _ =
     ]
 
 let main =
-  let out = rec_pid () in
+  let out = rec_pid () |> collect stdout in
   match out.status with
-  | 0 -> stop out.stdout
+  | 0 -> stop out.stdout |> Dmenu.catch_errors
   | _ -> main_menu () |> Dmenu.catch_errors

@@ -9,23 +9,23 @@ let notify im txt =
   in
   process "notify-send" [ "-t"; "4000"; "Screenshoter"; "-i"; icon; txt ] |> run
 
-
-let get_result ok err out =
-  match out.status with
-  | 0 -> Result.ok ok
-  | _ -> Result.error (`Msg err)
+let get_result ?(expected=0) f_ok f_err out =
+  if out.status = expected then
+    Result.ok (f_ok out)
+  else Result.error (`Msg (f_err out))
+let just x _ = x
 
 let systemctl args _ =
   process "systemctl" args |> collect only_status
-  |> get_result () "Action failed..."
+  |> get_result (just ()) (just "Action failed...")
 
 let exit _ =
   process "swaymsg" ["exit"] |> collect only_status
-  |> get_result () "Action failed..."
+  |> get_result (just ()) (just "Action failed...")
 
 let lock _ =
   process "swaylock-blur" [] |> collect only_status
-  |> get_result () "Action failed..."
+  |> get_result (just ()) (just "Action failed...")
 
 let span str f =
   "<span rise='1000' font='"^f^"'>"^str^"</span>"
