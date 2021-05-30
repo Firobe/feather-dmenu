@@ -1,5 +1,6 @@
 open Feather
 open Feather_dmenu
+open Infix
 
 let (let*) = Result.bind
 let clear_time = 5
@@ -39,7 +40,6 @@ let get_result ?(f=fun _ -> true) ?(expected=0) f_ok f_err out =
     Result.ok (f_ok out)
   else Result.error (`Msg (f_err out))
 let get_stdout {stdout; _} = stdout
-let get_stderr {stderr; _} = stderr
 let just x _ = x
 
 let not_empty_stdout out = not (String.equal "" out.stdout)
@@ -51,7 +51,7 @@ let array_from_name name items =
   |> get_result get_stdout (just "Could not convert name to array")
 
 let load_items session =
-  process "bw" ["list"; "items"; "--session"; session] |> write_stderr_to devnull
+  process "bw" ["list"; "items"; "--session"; session] >! devnull
   |> collect stdout |>
   get_result ~f:not_empty_stdout get_stdout (just "Could not load items")
 
@@ -85,12 +85,12 @@ let copy_password name items =
   let* pass = get_pass item in
   let* _ = copy pass in
   let body =
-    if clear_time > 0 then
+    if Stdlib.(clear_time > 0) then
       ("Will be cleared in "^(Int.to_string clear_time)^"seconds.")
     else ""
   in
   notify (name^" copied !") body;
-  if clear_time > 0 then clear pass
+  if Stdlib.(clear_time > 0) then clear pass
   else Result.ok ()
 
 let get_session key_id =
@@ -98,14 +98,13 @@ let get_session key_id =
   |> get_result get_stdout (just "Could not get session")
 
 let sync key_id =
-  let open Infix in
   let* session = get_session key_id in
-  process "bw" ["sync";"--session";session]
-  |> collect (stdout <+> stderr)
+  process "bw" ["sync";"--session";session] >! devnull
+  |> collect stdout
   |> get_result (just ()) (just "Failed to sync Bitwarden")
 
 let set_timeout key_id =
-  if auto_lock > 0 then begin
+  if Stdlib.(auto_lock > 0) then begin
     process "keyctl" ["timeout";key_id;(Int.to_string auto_lock)]
     |> collect only_status
     |> get_result (just ()) (just "Could not set session timeout")
@@ -114,7 +113,7 @@ let set_timeout key_id =
 
 let check_password pwd =
   let* str =
-    process "bw" ["unlock";pwd] |> write_stderr_to devnull |> collect stdout
+    process "bw" ["unlock";pwd] >! devnull |> collect stdout
     |> get_result ~f:not_empty_stdout get_stdout (just "Invalid master password")
   in
   echo str |. process "grep" ["export"]
@@ -157,26 +156,24 @@ and on_rofi_exit key_id items out =
   | _ -> Result.error (`Msg ("Rofi exited with error : "^(Int.to_string out.status)))
 
 and lock_vault () =
-  let open Infix in
   let* _ =
-    process "keyctl" ["purge";"user";"bw_session"]
-    |> collect (stdout <+> stderr)
+    process "keyctl" ["purge";"user";"bw_session"] >! devnull
+    |> collect stdout
     |> get_result (just ()) (just "Could not lock the vault")
   in
   main_menu ~msg:"Vault locked !" ()
 
 let main () =
-  let open Infix in
   if auto_lock = 0 then begin
     let _ =
-      process "keyctl" ["purge";"user";"bw_session"]
-      |> collect (stdout <+> stderr) in
+      process "keyctl" ["purge";"user";"bw_session"] >! devnull
+      |> collect stdout in
     main_menu ()
   end
   else
     let out =
-      process "keyctl" ["request";"user";"bw_session"]
-      |> collect (stdout <+> stderr)
+      process "keyctl" ["request";"user";"bw_session"] >! devnull
+      |> collect stdout
     in
     if out.status <> 0 then
       main_menu ()
