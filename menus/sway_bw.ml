@@ -50,11 +50,6 @@ let array_from_name name items =
   |> collect stdout
   |> get_result get_stdout (just "Could not convert name to array")
 
-let load_items session =
-  process "bw" ["list"; "items"; "--session"; session] >! devnull
-  |> collect stdout |>
-  get_result ~f:not_empty_stdout get_stdout (just "Could not load items")
-
 let copy str =
   process "echo" ["-n";str] |. process "wl-copy" [] |> collect only_status
   |> get_result (just ()) (just "Could not copy")
@@ -76,13 +71,23 @@ let clear old =
   end
   else Result.ok ()
 
-let get_pass item =
-  echo item |. process "jq" ["-r";".[0].login.password"] |> collect stdout
+let get_session key_id =
+  process "keyctl" ["pipe";key_id] |> collect stdout
+  |> get_result get_stdout (just "Could not get session")
+
+let load_items key_id =
+  let* session = get_session key_id in
+  process "bw" ["list"; "items"; "--session"; session] >! devnull
+  |> collect stdout |>
+  get_result ~f:not_empty_stdout get_stdout (just "Could not load items")
+
+let get_pass key_id item =
+  let* session = get_session key_id in
+  process "bw" ["get";"password";item;"--session";session] |> collect stdout
   |> get_result get_stdout (just "Could not get password")
 
-let copy_password name items =
-  let* item = array_from_name name items in
-  let* pass = get_pass item in
+let copy_password key_id name =
+  let* pass = get_pass key_id name in
   let* _ = copy pass in
   let body =
     if Stdlib.(clear_time > 0) then
@@ -92,10 +97,6 @@ let copy_password name items =
   notify (name^" copied !") body;
   if Stdlib.(clear_time > 0) then clear pass
   else Result.ok ()
-
-let get_session key_id =
-  process "keyctl" ["pipe";key_id] |> collect stdout
-  |> get_result get_stdout (just "Could not get session")
 
 let sync key_id =
   let* session = get_session key_id in
@@ -129,8 +130,7 @@ let rec show_items t =
     | Pwd pwd -> check_password pwd
   in
   let* _ = set_timeout key_id in
-  let* session = get_session key_id in
-  let* items = load_items session in
+  let* items = load_items key_id in
   let* items_names =
     echo items |. process "jq" ["-r";".[] | select( has( \"login\" ) ) | \"\\(.name)\""]
     |>collect stdout |> get_result get_stdout (just "Could not extract names")
@@ -139,7 +139,7 @@ let rec show_items t =
   let title = "Name" in
   Dmenu.menu ~title ~msg ~misc:actions
     (List.map (fun l ->
-         Dmenu.entry l (fun out -> on_rofi_exit key_id items out)) lines)
+         Dmenu.entry l (fun out -> on_rofi_exit key_id out)) lines)
 
 and main_menu ?(msg="Unlock your vault") () =
   let title = "Master password" in
@@ -148,9 +148,9 @@ and main_menu ?(msg="Unlock your vault") () =
   Dmenu.menu ~title ~theme ~msg ~misc
     ~on_unknown:(fun out -> show_items (Pwd out.stdout)) []
 
-and on_rofi_exit key_id items out =
+and on_rofi_exit key_id out =
   match out.status with
-  | 0 -> copy_password out.stdout items
+  | 0 -> copy_password key_id out.stdout
   | 10 -> let* _ = sync key_id in show_items (KeyId key_id)
   | 11 -> lock_vault ()
   | _ -> Result.error (`Msg ("Rofi exited with error : "^(Int.to_string out.status)))
