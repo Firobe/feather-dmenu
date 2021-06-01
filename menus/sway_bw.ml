@@ -12,19 +12,20 @@ type item = KeyId of string | Pwd of string
 let kb_sync = "Alt+s"
 (* let kb_namesearch = "Alt+n" *)
 let kb_lock = "Alt+l"
-let kb_typeall = "Alt+1"
+let kb_user = "Alt+u"
+(* let kb_typeall = "Alt+1"
 let kb_typeuser = "Alt+2"
-let kb_typepass = "Alt+3"
-let msg = "  <b>"^kb_sync^"</b>: sync  | <b>"^kb_typeall^"</b>: Type all
-  <b>"^kb_lock^"</b>: lock  | <b>"^kb_typeuser^"</b>: Type user
-               | <b>"^kb_typepass^"</b>: Type pass"
+let kb_typepass = "Alt+3" *)
+let msg = " <b>Enter</b>: Copy pwd | <b>"^kb_sync^"</b>: sync vault
+ <b>"^kb_user^"</b>: Copy id  | <b>"^kb_lock^"</b>: lock vault"
 
 let actions =
   [ "-kb-custom-1";kb_sync;
     "-kb-custom-2";kb_lock;
-    "-kb-custom-3";kb_typeall;
+    "-kb-custom-3";kb_user;]
+    (* "-kb-custom-3";kb_typeall;
     "-kb-custom-4";kb_typeuser;
-    "-kb-custom-5";kb_typepass]
+    "-kb-custom-5";kb_typepass] *)
 
 let notify title txt =
   let time = clear_time * 1000 in
@@ -86,16 +87,25 @@ let get_pass key_id item =
   process "bw" ["get";"password";item;"--session";session] |> collect stdout
   |> get_result get_stdout (just "Could not get password")
 
-let copy_password key_id name =
-  let* pass = get_pass key_id name in
-  let* _ = copy pass in
+let get_user key_id item =
+  let* session = get_session key_id in
+  process "bw" ["get";"username";item;"--session";session] |> collect stdout
+  |> get_result get_stdout (just "Could not get username")
+
+let get_and_copy typ key_id name =
+  let* copied =
+    match typ with
+    |`Pwd -> get_pass key_id name
+    |`User -> get_user key_id name
+  in
+  let* _ = copy copied in
   let body =
     if Stdlib.(clear_time > 0) then
       ("Will be cleared in "^(Int.to_string clear_time)^"seconds.")
     else ""
   in
   notify (name^" copied !") body;
-  if Stdlib.(clear_time > 0) then clear pass
+  if Stdlib.(clear_time > 0) then clear copied
   else Result.ok ()
 
 let sync key_id =
@@ -150,9 +160,10 @@ and main_menu ?(msg="Unlock your vault") () =
 
 and on_rofi_exit key_id out =
   match out.status with
-  | 0 -> copy_password key_id out.stdout
+  | 0 -> get_and_copy `Pwd key_id out.stdout
   | 10 -> let* _ = sync key_id in show_items (KeyId key_id)
   | 11 -> lock_vault ()
+  | 12 -> get_and_copy `User key_id out.stdout
   | _ -> Result.error (`Msg ("Rofi exited with error : "^(Int.to_string out.status)))
 
 and lock_vault () =
