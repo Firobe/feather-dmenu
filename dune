@@ -52,3 +52,8 @@
   (libraries str feather_dmenu)
   (modules wifi)
 )
+(executable
+  (name launch_polybar)
+  (libraries feather)
+  (modules launch_polybar)
+)
