@@ -1,0 +1,13 @@
+(executables
+  (names example
+         cactus_client
+         screenshot
+         shutdown
+         sway_hub
+         sway_screenshots
+         sway_powermenu
+         sway_bw
+         wifi
+         launch_polybar)
+  (libraries feather_dmenu str)
+)

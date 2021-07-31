@@ -1,0 +1,4 @@
+(library
+    (name feather_dmenu)
+    (libraries feather)
+)
