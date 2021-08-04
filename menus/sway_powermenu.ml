@@ -1,5 +1,6 @@
 open Feather
 open Feather_dmenu
+open Dmenu
 
 let notify im txt =
   let icon =
@@ -9,22 +10,16 @@ let notify im txt =
   in
   process "notify-send" [ "-t"; "4000"; "Screenshoter"; "-i"; icon; txt ] |> run
 
-let get_result ?(expected=0) f_ok f_err out =
-  if out.status = expected then
-    Result.ok (f_ok out)
-  else Result.error (`Msg (f_err out))
-let just x _ = x
-
 let systemctl args _ =
-  process "systemctl" args |> collect only_status
+  process "systemctl" args |> collect status |> pack
   |> get_result (just ()) (just "Action failed...")
 
 let exit _ =
-  process "swaymsg" ["exit"] |> collect only_status
+  process "swaymsg" ["exit"] |> collect status |> pack
   |> get_result (just ()) (just "Action failed...")
 
 let lock _ =
-  process "swaylock-blur" [] |> collect only_status
+  process "swaylock-blur" [] |> collect status |> pack
   |> get_result (just ()) (just "Action failed...")
 
 let span str f =

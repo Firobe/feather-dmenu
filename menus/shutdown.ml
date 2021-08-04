@@ -1,14 +1,10 @@
 open Feather
 open Feather_dmenu
-
-let get_result ok err out =
-  match out.status with
-  | 0 -> Result.ok ok
-  | _ -> Result.error (`Msg err)
+open Dmenu
 
 let action kind _ =
-  process "i3exit" [ kind ] |> collect only_status
-  |> get_result () "Action failed..."
+  process "i3exit" [ kind ] |> collect status
+  |> pack |> get_result (just ()) (just "Action failed...")
 
 let launch_heater_menu _ =
   process "cactus_client.exe" [] |> run;

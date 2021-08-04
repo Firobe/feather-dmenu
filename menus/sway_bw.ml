@@ -1,5 +1,6 @@
 open Feather
 open Feather_dmenu
+open Dmenu
 open Infix
 
 let (let*) = Result.bind
@@ -40,56 +41,56 @@ let get_result ?(f=fun _ -> true) ?(expected=0) f_ok f_err out =
   if out.status = expected && f out then
     Result.ok (f_ok out)
   else Result.error (`Msg (f_err out))
-let get_stdout {stdout; _} = stdout
-let just x _ = x
 
 let not_empty_stdout out = not (String.equal "" out.stdout)
 
 let array_from_name name items =
   echo items
   |. process "jq" ["-r"; ". | map(select((.name == \""^name^"\") and (.type == 1)))"]
-  |> collect stdout
+  |> collect stdout_and_status |> pack_out
   |> get_result get_stdout (just "Could not convert name to array")
 
 let copy str =
-  process "echo" ["-n";str] |. process "wl-copy" [] |> collect only_status
-  |> get_result (just ()) (just "Could not copy")
+  process "echo" ["-n";str] |. process "wl-copy" [] |> collect status
+  |> pack |> get_result (just ()) (just "Could not copy")
 
 let paste () =
-  process "wl-paste" [] |> collect stdout
-  |> get_result get_stdout (just "Could not paste")
+  process "wl-paste" [] |> collect stdout_and_status
+  |> pack_out |> get_result get_stdout (just "Could not paste")
 
 let sleep time =
-  process "sleep" [time] |> collect only_status
+  process "sleep" [time] |> collect status |> pack
   |> get_result (just ()) (just "Could not sleep")
 
 let clear old =
   let* _ = sleep (Int.to_string clear_time) in
   let* curr = paste () in
   if String.equal curr old then begin
-    process "wl-copy" ["--clear"] |> collect only_status
+    process "wl-copy" ["--clear"] |> collect status |> pack
     |> get_result (just ()) (just "Could not clear")
   end
   else Result.ok ()
 
 let get_session key_id =
-  process "keyctl" ["pipe";key_id] |> collect stdout
-  |> get_result get_stdout (just "Could not get session")
+  process "keyctl" ["pipe";key_id] |> collect stdout_and_status
+  |> pack_out |> get_result get_stdout (just "Could not get session")
 
 let load_items key_id =
   let* session = get_session key_id in
   process "bw" ["list"; "items"; "--session"; session] >! devnull
-  |> collect stdout |>
-  get_result ~f:not_empty_stdout get_stdout (just "Could not load items")
+  |> collect stdout_and_status |> pack_out
+  |> get_result ~f:not_empty_stdout get_stdout (just "Could not load items")
 
 let get_pass key_id item =
   let* session = get_session key_id in
-  process "bw" ["get";"password";item;"--session";session] |> collect stdout
+  process "bw" ["get";"password";item;"--session";session]
+  |> collect stdout_and_status |> pack_out
   |> get_result get_stdout (just "Could not get password")
 
 let get_user key_id item =
   let* session = get_session key_id in
-  process "bw" ["get";"username";item;"--session";session] |> collect stdout
+  process "bw" ["get";"username";item;"--session";session] 
+  |> collect stdout_and_status |> pack_out
   |> get_result get_stdout (just "Could not get username")
 
 let get_and_copy typ key_id name =
@@ -111,26 +112,26 @@ let get_and_copy typ key_id name =
 let sync key_id =
   let* session = get_session key_id in
   process "bw" ["sync";"--session";session] >! devnull
-  |> collect stdout
+  |> collect stdout_and_status |> pack_out
   |> get_result (just ()) (just "Failed to sync Bitwarden")
 
 let set_timeout key_id =
   if Stdlib.(auto_lock > 0) then begin
     process "keyctl" ["timeout";key_id;(Int.to_string auto_lock)]
-    |> collect only_status
+    |> collect status |> pack
     |> get_result (just ()) (just "Could not set session timeout")
   end
   else Result.ok ()
 
 let check_password pwd =
   let* str =
-    process "bw" ["unlock";pwd] >! devnull |> collect stdout
+    process "bw" ["unlock";pwd] >! devnull |> collect stdout_and_status |> pack_out
     |> get_result ~f:not_empty_stdout get_stdout (just "Invalid master password")
   in
   echo str |. process "grep" ["export"]
   |. process "sed" [ "-E"; "s/.*export BW_SESSION=\"(.*==)\"$/\\1/"]
   |. process "keyctl" ["padd";"user";"bw_session";"@u"]
-  |> collect stdout
+  |> collect stdout_and_status |> pack_out
   |> get_result get_stdout (just "Could not unlock vault")
 
 let rec show_items t =
@@ -143,7 +144,8 @@ let rec show_items t =
   let* items = load_items key_id in
   let* items_names =
     echo items |. process "jq" ["-r";".[] | select( has( \"login\" ) ) | \"\\(.name)\""]
-    |>collect stdout |> get_result get_stdout (just "Could not extract names")
+    |> collect stdout_and_status |> pack_out
+    |> get_result get_stdout (just "Could not extract names")
   in
   let lines = String.split_on_char '\n' items_names in
   let title = "Name" in
@@ -169,7 +171,7 @@ and on_rofi_exit key_id out =
 and lock_vault () =
   let* _ =
     process "keyctl" ["purge";"user";"bw_session"] >! devnull
-    |> collect stdout
+    |> collect stdout_and_status |> pack_out
     |> get_result (just ()) (just "Could not lock the vault")
   in
   main_menu ~msg:"Vault locked !" ()
@@ -182,14 +184,14 @@ let main () =
     main_menu ()
   end
   else
-    let out =
+    let stdout, status =
       process "keyctl" ["request";"user";"bw_session"] >! devnull
-      |> collect stdout
+      |> collect stdout_and_status
     in
-    if out.status <> 0 then
+    if status <> 0 then
       main_menu ()
     else
-      show_items (KeyId out.stdout)
+      show_items (KeyId stdout)
 
 let main =
   main () |> Dmenu.catch_errors

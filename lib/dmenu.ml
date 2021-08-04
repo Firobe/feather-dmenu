@@ -1,11 +1,10 @@
 open Feather
 open Base
-open Infix
 
 type 'e prompt = {
   label: string;
   style: [`Urgent | `Active | `None];
-  f: ((string,string) output -> (unit, 'e) Result.t) option;
+  f: (everything -> (unit, 'e) Result.t) option;
 }
 
 let get_choice input prompts =
@@ -44,7 +43,7 @@ let menu' title msg theme case on_exit on_unknown misc prompts =
     process "rofi"
       (case :: allow_custom :: theme_l @ msg_l @ misc @
        [ "-markup-rows"; "-dmenu"; "-u"; urgents ; "-a"; active; "-p"; title ])
-    |> collect Feather.(stdout <+> stderr) in
+    |> collect everything in
   if String.equal out.stdout "" && out.status = 1 then
     do_exit "No action selected" on_exit
   else
@@ -73,3 +72,15 @@ let catch_errors = function
 let empty_row = {label = ""; style = `None; f = None}
 let default_entry ?(style=`None) label = {label; style; f = None}
 let entry ?(style=`None) label f = {label; style; f = Some f}
+
+(* Extraction / packing functions *)
+let get_result ?(expected=0) f_ok f_err out =
+  if out.status = expected then
+    Stdlib.Result.ok (f_ok out)
+  else Stdlib.Result.error (`Msg (f_err out))
+let pack ?(stdout="") ?(stderr="") status = {stdout; stderr; status}
+let pack_out (stdout, status) = pack ~stdout status
+let get_stdout {stdout; _} = stdout
+let get_stderr {stderr; _} = stderr
+let just x _ = x
+

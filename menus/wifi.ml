@@ -1,5 +1,6 @@
 open Feather
 open Feather_dmenu
+open Dmenu
 
 let (let*) = Result.bind
 
@@ -27,8 +28,7 @@ let parse_wifi str =
     Result.ok (List.map (fun l -> String.split_on_char ' ' l) (List.tl lines))
 
 let get_status () =
-  let out = process "nmcli" ["radio";"wifi"] |> collect stdout in
-  if String.equal out.stdout "enabled" then true else false
+  String.equal (process "nmcli" ["radio";"wifi"] |> collect stdout) "enabled"
 
 let get_status_str () =
   if get_status () then
@@ -38,10 +38,10 @@ let get_status_str () =
 
 let get_curr_wifi () =
   if get_status () then begin
-    let out = process "nmcli" ["con";"show";"-a"] |> collect stdout in
-    if String.equal "" out.stdout then Result.ok "Disconnected"
+    let stdout = process "nmcli" ["con";"show";"-a"] |> collect stdout in
+    if String.equal "" stdout then Result.ok "Disconnected"
     else begin
-      let* name = parse_wifi out.stdout in
+      let* name = parse_wifi stdout in
       if List.hd name = [] then
         Result.error (`Msg "Something bad happened")
       else
@@ -59,11 +59,12 @@ let get_title () =
     Result.ok msg
 
 let switch_wifi state =
-  process "nmcli" ["radio";"wifi";state] |> collect only_status
+  process "nmcli" ["radio";"wifi";state] |> collect status |> pack
   |> get_result (just ()) (just @@ "Switch wifi to "^state^" failed :/")
 
 let display_con () =
-  process "nmcli" ["dev";"wifi"] |. process "cat" [] |> collect stdout
+  process "nmcli" ["dev";"wifi"] |. process "cat" []
+  |> collect stdout_and_status |> pack_out
   |> get_result ~f:not_empty_stdout get_stdout (just "Could not display connection list")
 
 let rec main_menu ?msg () =
@@ -119,15 +120,15 @@ and connect_to ?pwd name =
   let out =
     begin match pwd with
       | None ->
-        let out =
+        let stdout, status =
           process "nmcli" ["--ask";"dev";"wifi";"con";name]
-          |> collect stdout in
-        echo (out.stdout^":"^Int.to_string out.status) |> collect only_status
+          |> collect stdout_and_status in
+        echo (stdout^":"^Int.to_string status) |> collect Feather.status
       | Some pwd -> echo pwd |. process "nmcli" ["--ask";"dev";"wifi";"con";name]
-                    |> collect only_status
+                    |> collect status
     end
   in
-  match out.status with
+  match out with
   | 0 -> Result.ok ()
   | _ -> ask_password name
 

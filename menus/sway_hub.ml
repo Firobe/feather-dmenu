@@ -1,31 +1,26 @@
 open Feather
 open Feather_dmenu
-
-let get_result ?(expected=0) f_ok f_err out =
-  if out.status = expected then
-    Result.ok (f_ok out)
-  else Result.error (`Msg (f_err out))
-let just x _ = x
+open Dmenu
 
 let bw _ =
-  process "sway_bw.exe" [] |> collect only_status
+  process "sway_bw.exe" [] |> collect status |> pack
   |> get_result (just ()) (just "Action failed...")
 
 let screen _ =
-  process "sway_screenshots.exe" [] |> collect only_status
+  process "sway_screenshots.exe" [] |> collect status |> pack
   |> get_result (just ()) (just "Action failed...")
 
 let power _ =
-  process "sway_powermenu.exe" [] |> collect only_status
+  process "sway_powermenu.exe" [] |> collect status |> pack
   |> get_result (just ()) (just "Action failed...")
 
 let wifi _ =
-  process "wifi.exe" [] |> collect only_status
+  process "wifi.exe" [] |> collect status |> pack
   |> get_result (just ()) (just "Action failed...")
 
 let app _ =
   process "rofi" ["-combi-modi";"drun#run";"-show";"combi";"-display-combi";"App launcher"]
-  |> collect only_status |> get_result (just ()) (just "Action failed...")
+  |> collect status |> pack |> get_result (just ()) (just "Action failed...")
 
 let span str f =
   "<span font='"^f^"'>"^str^"</span>"

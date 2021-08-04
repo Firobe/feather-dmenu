@@ -1,13 +1,8 @@
 open Feather
 open Feather_dmenu
+open Dmenu
 
 let (let*) = Result.bind
-
-let get_result ?(expected=0) f_ok f_err out =
-  if out.status = expected then
-    Result.ok (f_ok out)
-  else Result.error (`Msg (f_err out))
-let just x _ = x
 
 let notify txt =
   let success_icon ="/usr/share/icons/gnome/32x32/status/info.png" in
@@ -28,8 +23,8 @@ let send_raspi ?(hostname="raspi") ?(port=2713) command =
       expect
     |} hostname port command in
   echo expect_file |. process "expect" [ "-" ]
-  |> collect stdout_lines
-  |> get_result (fun {stdout;_} -> List.nth stdout 1) (just "Raspi communication failure")
+  |> collect stdout_and_status |> pack_out
+  |> get_result (fun {stdout;_} -> List.nth (lines stdout) 1) (just "Raspi communication failure")
 
 let float_of_string_r x =
   float_of_string_opt x |> Option.to_result ~none:(`Msg "Not a float")
@@ -38,7 +33,7 @@ let read_temp _ =
   let* answer = send_raspi "read" in
   let* temp =
     echo answer |. sed {|^Temp: \(.*\)°.*$|} {|\1|}
-    |> collect_stdout
+    |> collect stdout
     |> float_of_string_r
   in
   notify (Printf.sprintf "Current temperature: %g°C" temp) ;

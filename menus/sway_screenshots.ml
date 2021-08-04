@@ -1,5 +1,6 @@
 open Feather
 open Feather_dmenu
+open Dmenu
 open Infix
 
 let (let*) = Result.bind
@@ -19,12 +20,10 @@ let notify im txt =
 let get_date () = process "date" ["+%Y-%m-%d-%H-%M-%S"] |> collect stdout
 
 let target_screen =
-  let out = process "xdg-user-dir" ["PICTURES"] |> collect stdout in
-  out.stdout^"/screenshots"
+  (process "xdg-user-dir" ["PICTURES"] |> collect stdout) ^ "/screenshots"
 
 let target_videos =
-  let out = process "xdg-user-dir" ["VIDEOS"] |> collect stdout in
-  out.stdout^"/recordings"
+  (process "xdg-user-dir" ["VIDEOS"] |> collect stdout) ^ "/recordings"
 
 let focused () =
   process "swaymsg" ["-tget_tree"] |.
@@ -42,28 +41,20 @@ let () =
   mkdir_p target_screen |> run;
   mkdir_p target_videos |> run
 
-let filename_screen = target_screen ^ "/scrn-" ^ (get_date()).stdout ^ ".png"
-let filename_record = target_videos ^ "/vid-" ^ (get_date()).stdout ^ ".mp4"
+let filename_screen = target_screen ^ "/scrn-" ^ (get_date()) ^ ".png"
+let filename_record = target_videos ^ "/vid-" ^ (get_date()) ^ ".mp4"
 
 let copy file = process "wl-copy" [] < file
 
-let get_result ?(expected=0) f_ok f_err out =
-  if out.status = expected then
-    Result.ok (f_ok out)
-  else Result.error (`Msg (f_err out))
-let get_stdout {stdout; _} = stdout
-let get_stderr {stderr; _} = stderr
-let just x _ = x
-
 let get_selection cmd =
-  cmd |> collect (stdout <+> stderr)
+  cmd |> collect everything
   |> get_result get_stdout get_stderr
 
 let cs cmd _ =
   let* geometry = get_selection cmd in
   let* result =
     process "grim" [ "-g"; geometry; filename_screen ] &&. copy filename_screen
-    |> collect only_status |> get_result
+    |> collect status |> pack |> get_result
       (just @@ Printf.sprintf "Screenshot saved to %s and copied to clipboard!" target_screen)
       (just "Action failed...")
   in
@@ -79,7 +70,7 @@ let re sound cmd _ =
   let* geometry = get_selection cmd in
   let* result =
     process "wf-recorder" (audio @ ["-g"; geometry; "-f"; filename_record])
-    &&. copy filename_record |> collect only_status |> get_result
+    &&. copy filename_record |> collect status |> pack |> get_result
       (just @@ Printf.sprintf "Record saved to %s and copied to clipboard!" target_videos)
       (just "Action failed...")
   in
@@ -92,7 +83,7 @@ let rec_pid () =
   process "pidof" ["wf-recorder"]
 
 let stop pid =
-  process "kill" ["-SIGINT";pid] |> collect only_status
+  process "kill" ["-SIGINT";pid] |> collect status |> pack 
   |> get_result (just ()) (just "Killing wf-recorder failed")
 
 let rec span ?(b=false) ?(a=false) str f =
@@ -127,12 +118,12 @@ and ask_audio_menu () =
 and pulse_menu _ =
   let ids =
     process "pactl" [ "list"; "short" ; "sources" ]
-    |. cut ~d:'\t' 1 |> collect_lines
+    |. cut ~d:'\t' 1 |> collect stdout |> lines
   in
   let descriptions =
     process "pactl" [ "list"; "sources" ]
     |. grep "Description" |. cut ~d:':' 2
-    |> collect_lines |> List.map String.trim
+    |> collect stdout |> lines |> List.map String.trim
   in
   let prompts =
     (Dmenu.entry ~style:`Active "Default source" (record_menu ~sound:"default"))
@@ -150,7 +141,7 @@ and record_menu ?sound _ =
     ]
 
 let main =
-  let out = rec_pid () |> collect stdout in
-  match out.status with
-  | 0 -> stop out.stdout |> Dmenu.catch_errors
+  let stdout, status = rec_pid () |> collect stdout_and_status in
+  match status with
+  | 0 -> stop stdout |> Dmenu.catch_errors
   | _ -> main_menu () |> Dmenu.catch_errors

@@ -15,7 +15,7 @@ let launch_new () =
     let env = ("MONITOR", mon) :: current_env in
     process "polybar" [ "--reload"; bar_name ] |> run_bg ~env
   in
-  let monitors = process "polybar" [ "-m" ] |. cut ~d:':' 1 |> collect_lines in
+  let monitors = process "polybar" [ "-m" ] |. cut ~d:':' 1 |> collect stdout |> lines in
   List.iter launch_one monitors
 
 let _ =

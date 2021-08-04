@@ -1,6 +1,7 @@
 open Feather
 open Infix
 open Feather_dmenu
+open Dmenu
 
 let (let*) = Result.bind
 
@@ -14,21 +15,13 @@ let notify txt =
   in process "notify-send"
     [ "-t"; "2000"; "Screenshoter"; "-i"; success_icon; txt ] |> run
 
-let get_result ?(expected=0) f_ok f_err out =
-  if out.status = expected then
-    Result.ok (f_ok out)
-  else Result.error (`Msg (f_err out))
-let get_stdout {stdout; _} = stdout
-let get_stderr {stderr; _} = stderr
-let just x _ = x
-
 let maim_format = "%wx%h+%x+%y"
 let ffmpeg_format = "-video_size %wx%h -grab_x %x -grab_y %y"
 
 let get_selection form =
     process "slop" [ "--highlight"; "--bordersize=3";
                      "--color=0.3,0.4,0.6,0.4"; "-f"; form ]
-    |> collect (stdout <+> stderr)
+    |> collect everything
     |> get_result get_stdout get_stderr
 
 (* Screenshot *)
@@ -42,7 +35,7 @@ let take_screenshot _ =
   let* geometry = get_selection maim_format in
   let* result =
     screenshot geometry |. clipboard_img >! devnull
-    |> collect only_status
+    |> collect status |> pack
     |> get_result (just "Image copied into clipboard") (just "Screenshot failed...")
   in notify result; Result.ok ()
 
@@ -83,7 +76,7 @@ let take_video ?sound _ =
     Sys.getenv_opt "DISPLAY"
     |> Option.to_result ~none:(`Msg "Could not find DISPLAY") in
   let* _ =
-    screencast ~sound ~display args |> collect only_status
+    screencast ~sound ~display args |> collect status |> pack 
     |> get_result ~expected:255 (just ()) (just "Video failed...") in
   Dmenu.menu ~misc
     ~msg:"The video is in MP4 format. It will be placed into your home folder."
@@ -91,23 +84,23 @@ let take_video ?sound _ =
     ~title:"File name" Dmenu.[entry ~style:`Urgent "Abort" abort]
 
 let video_running () =
-  let out = process "pidof" ["ffmpeg"] |> collect stdout in
-  if out.status = 0 then Some out.stdout else None
+  let stdout, status = process "pidof" ["ffmpeg"] |> collect stdout_and_status in
+  if status = 0 then Some stdout else None
 
 let video_stop pid =
-  process "kill" [ "-SIGINT"; pid] |> collect only_status
+  process "kill" [ "-SIGINT"; pid] |> collect status |> pack
   |> get_result (just ()) (just "Error when trying to kill ffmpeg")
 
 (* MENUS *)
 let rec pulse_menu _ =
   let ids =
     process "pactl" [ "list"; "short" ; "sources" ]
-    |. cut ~d:'\t' 1 |> collect_lines
+    |. cut ~d:'\t' 1 |> collect stdout |> lines
   in
   let descriptions =
     process "pactl" [ "list"; "sources" ]
     |. grep "Description" |. cut ~d:':' 2
-    |> collect_lines |> List.map String.trim
+    |> collect stdout |> lines |> List.map String.trim
   in
   let prompts =
     (Dmenu.entry ~style:`Active "Default source" (take_video ~sound:"default"))
