@@ -13,7 +13,8 @@ let launch_new () =
   let launch_one mon =
     Printf.printf "Launching a bar on %s\n" mon;
     let env = ("MONITOR", mon) :: current_env in
-    process "polybar" [ "--reload"; bar_name ] |> run_bg ~env
+    process "polybar" [ "--reload"; bar_name ] |> run_in_background ~env
+    |> ignore
   in
   let monitors = process "polybar" [ "-m" ] |. cut ~d:':' 1 |> collect stdout |> lines in
   List.iter launch_one monitors
