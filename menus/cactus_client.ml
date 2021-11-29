@@ -56,10 +56,20 @@ let read_goal_wrap _ =
   notify (Printf.sprintf "Current goal: %g°C" goal) ;
   Result.ok ()
 
-let set_goal x =
+let set_goal ?(quiet=false) x =
   let* answer = send_raspi ("set " ^ (string_of_float x)) in
-  if answer = "Goal changed" then Result.ok ()
+  if answer = "Goal changed" then
+    begin
+      if not quiet then notify (Printf.sprintf "Goal changed to: %g°C" x);
+      Result.ok ()
+    end
   else Result.error (`Msg answer)
+
+let adjust_sensor x =
+  let* answer = send_raspi ("adjust " ^ (string_of_float x)) in
+  match String.split_on_char ' ' answer with
+  | "Registered" :: _ -> notify answer ; Result.ok ()
+  | _ -> Result.error (`Msg answer)
 
 let modify step _ =
   let* current = read_goal () in
@@ -68,13 +78,12 @@ let modify step _ =
   notify (Printf.sprintf "Goal: %g°C -> %g°C" current next) ;
   Result.ok ()
 
-let custom_temp _ =
+let custom_temp post_action _ =
   Dmenu.menu ~title:"Write a temperature" ~msg:"Expects a float"
     ~on_unknown:(fun out ->
         if String.equal "" out.stdout then failwith "LOL";
         let* temp = float_of_string_r out.stdout in
-        let* _ = set_goal temp in
-        notify (Printf.sprintf "Goal changed to: %g°C" temp);
+        let* _ = post_action temp in
         Result.ok ()
       ) []
 
@@ -85,7 +94,9 @@ let main =
         entry "什 Show goal" read_goal_wrap;
         entry ~style:`Active " More heat!" (modify 1.);
         entry ~style:`Active " Less heat..." (modify (-1.));
-        entry ~style:`Active " Custom temperature" custom_temp;
+        entry ~style:`Active " Custom temperature"
+          (custom_temp (set_goal ~quiet:true));
+        entry ~style:`Urgent " Calibrate sensor" (custom_temp adjust_sensor);
         entry ~style:`Urgent "⏽ Turn on" (turn "on");
         entry ~style:`Urgent "⭘ Turn off" (turn "off");
       ] |> Dmenu.catch_errors
