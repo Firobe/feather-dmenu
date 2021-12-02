@@ -27,8 +27,6 @@ let xeno_purple = "a317ff"
 let xeno_light_purple = "9c84ff"
 let xeno_orange = "ffb782"
 
-let _ = debug := true
-
 let lock _ =
   process "swaylock" [
     "--show-failed-attempts";
