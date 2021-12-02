@@ -34,7 +34,7 @@ let lock _ =
     "--show-failed-attempts";
     "--screenshots";
     "--indicator-caps-lock";
-    "--indicator-radius";"180";
+    "--indicator-radius";"100";
     "--indicator-thickness"; "7";
     "--effect-pixelate"; "5";
     "--separator-color"; "00000000";
