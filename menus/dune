@@ -8,6 +8,7 @@
          sway_powermenu
          sway_bw
          wifi
+         display_menu
          launch_polybar)
   (libraries feather_dmenu str)
 )

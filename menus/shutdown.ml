@@ -10,6 +10,10 @@ let launch_heater_menu _ =
   process "cactus_client.exe" [] |> run;
   Result.ok ()
 
+let launch_display_menu _ =
+  process "display_menu.exe" [] |> run;
+  Result.ok ()
+
 let main =
   Dmenu.menu ~title:"Power menu" Dmenu.[
       entry ~style:`Urgent "襤 Shutdown" (action "shutdown");
@@ -18,5 +22,6 @@ let main =
       entry "望 Suspend" (action "suspend");
       entry " Lock" (action "lock");
       empty_row;
-      entry " Heater management" launch_heater_menu
+      entry " Heater management" launch_heater_menu;
+      entry " Display management" launch_display_menu;
     ] |> Dmenu.catch_errors
