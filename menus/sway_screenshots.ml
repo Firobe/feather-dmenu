@@ -50,13 +50,33 @@ let get_selection cmd =
   cmd |> collect everything
   |> get_result get_stdout get_stderr
 
+let screens_geometry screens_geo =
+  let w, h =
+    List.fold_left (fun (aw,ah) screen_geo ->
+        match String.split_on_char ' ' screen_geo with
+        | [_;res] ->
+          (match String.split_on_char 'x' res with
+           | [w;h] -> aw+ int_of_string w, ah+int_of_string h
+           | _ -> assert false)
+        | _ -> assert false
+      ) (0,0) screens_geo
+  in
+  Printf.sprintf "0,0 %dx%d" w h
+
+let parse_geometry geo =
+  if not @@ String.contains geo '\n' then
+    geo
+  else
+    screens_geometry (String.split_on_char '\n' geo)
+
 let cs cmd _ =
   let* geometry = get_selection cmd in
+  let geometry = parse_geometry geometry in
   let* result =
     process "grim" [ "-g"; geometry; filename_screen ] &&. copy filename_screen
     |> collect status |> pack |> get_result
       (just @@ Printf.sprintf "Screenshot saved to %s and copied to clipboard!" target_screen)
-      (just "Action failed...")
+      (just ("Action failed..."^geometry))
   in
   notify (Some filename_screen) result;
   Result.ok ()
