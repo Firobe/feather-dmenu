@@ -89,7 +89,7 @@ let get_pass key_id item =
 
 let get_user key_id item =
   let* session = get_session key_id in
-  process "bw" ["get";"username";item;"--session";session] 
+  process "bw" ["get";"username";item;"--session";session]
   |> collect stdout_and_status |> pack_out
   |> get_result get_stdout (just "Could not get username")
 

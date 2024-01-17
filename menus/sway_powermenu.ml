@@ -29,38 +29,28 @@ let xeno_orange = "ffb782"
 
 let lock _ =
   process "swaylock" [
+    "--daemonize";
+    "--ignore-empty-password";
     "--show-failed-attempts";
+    "--clock";
+    "--grace"; "0";
     "--screenshots";
     "--indicator-caps-lock";
-    "--indicator-radius";"100";
-    "--indicator-thickness"; "7";
-    "--effect-pixelate"; "5";
-    "--separator-color"; "00000000";
-    "--effect-greyscale";
+    "--effect-pixelate"; "6";
+    (* "--effect-greyscale"; *)
     "--fade-in"; "0.2";
-    "--key-hl-color"; "a317ff";
-    "--bs-hl-color"; "ffb782";
-    "--line-color"; "00000000";
-    "--text-color"; "9c84ff";
-    "--ring-color"; "9c84ff";
-    "--inside-color"; "000000a0";
-    "--line-clear-color"; "00000000";
-    "--text-clear-color"; "ffb782";
-    "--ring-clear-color"; "ffb782";
+    "--bs-hl-color"; "DD532E";
+    "--line-clear-color"; "000000";
+    "--text-clear-color"; "f8f8f2";
+    "--ring-clear-color"; "f8f8f2";
     "--inside-clear-color"; "000000a0";
-    "--line-caps-lock-color"; "00000000";
-    "--text-caps-lock-color"; "ffb782";
-    "--ring-caps-lock-color"; "ffb782";
-    "--inside-caps-lock-color"; "000000a0";
-    "--caps-lock-bs-hl-color"; "55cdfc";
-    "--caps-lock-key-hl-color"; "ff6691";
-    "--line-ver-color"; "00000000";
-    "--text-ver-color"; "55cdfc";
-    "--ring-ver-color"; "55cdfc";
+    "--line-ver-color"; "000000";
+    "--text-ver-color"; "2D6CA1";
+    "--ring-ver-color"; "2D6CA1";
     "--inside-ver-color"; "000000a0";
-    "--line-wrong-color"; "00000000";
-    "--text-wrong-color"; "f7a8b8";
-    "--ring-wrong-color"; "f7a8b8";
+    "--line-wrong-color"; "000000";
+    "--text-wrong-color"; "DD532E";
+    "--ring-wrong-color"; "DD532E";
     "--inside-wrong-color"; "000000a0"
   ] |> collect status |> pack
   |> get_result (just ()) (just "Action failed...")
