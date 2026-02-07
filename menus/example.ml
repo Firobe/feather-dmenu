@@ -12,7 +12,7 @@ let impossible _ =
   Feather.process "lolmdrwow" [] |> Feather.run;
   Result.ok ()
 
-let main =
+let () =
   Dmenu.menu ~on_unknown:process_arbitrary ~on_exit:`Error Dmenu.[
       default_entry "This entry uses the default action";
       empty_row;

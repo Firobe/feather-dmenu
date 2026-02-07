@@ -13,7 +13,6 @@ let get_result ?(f=fun _ -> true) ?(expected=0) f_ok f_err out =
     Result.ok (f_ok out)
   else Result.error (`Msg (f_err out))
 let get_stdout {stdout; _} = stdout
-let get_stderr {stderr; _} = stderr
 let just x _ = x
 
 let not_empty_stdout out = not (String.equal "" out.stdout)
@@ -132,5 +131,5 @@ and connect_to ?pwd name =
   | 0 -> Result.ok ()
   | _ -> ask_password name
 
-let main =
+let () =
   main_menu () |> Dmenu.catch_errors

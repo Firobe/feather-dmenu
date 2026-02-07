@@ -160,7 +160,7 @@ and record_menu ?sound _ =
       entry ((span ~b:true ~a:true "" "11")^"  Record select output") (re sound (select_output()));
     ]
 
-let main =
+let () =
   let stdout, status = rec_pid () |> collect stdout_and_status in
   match status with
   | 0 -> stop stdout |> Dmenu.catch_errors

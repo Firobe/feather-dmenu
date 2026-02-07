@@ -2,14 +2,6 @@ open Feather
 open Feather_dmenu
 open Dmenu
 
-let notify im txt =
-  let icon =
-    match im with
-    | None -> "/usr/share/icons/Papirus/48x48/devices/camera-photo.svg"
-    | Some filename -> filename
-  in
-  process "notify-send" [ "-t"; "4000"; "Screenshoter"; "-i"; icon; txt ] |> run
-
 let systemctl args _ =
   process "systemctl" args |> collect status |> pack
   |> get_result (just ()) (just "Action failed...")
@@ -17,15 +9,6 @@ let systemctl args _ =
 let exit _ =
   process "swaymsg" ["exit"] |> collect status |> pack
   |> get_result (just ()) (just "Action failed...")
-
-
-let transparent = "00000000"
-let transparent_black = "000000a0"
-let trans_blue = "55cdfc"
-let trans_pink = "f7a8b8"
-let xeno_purple = "a317ff"
-let xeno_light_purple = "9c84ff"
-let xeno_orange = "ffb782"
 
 let lock _ =
   process "swaylock" [
@@ -58,7 +41,7 @@ let lock _ =
 let span str f =
   "<span rise='1000' font='"^f^"'>"^str^"</span>"
 
-let main =
+let () =
   let title = "Powermenu" in
   let theme = "~/.config/rofi/action.rasi" in
   Dmenu.menu ~title ~theme Dmenu.[

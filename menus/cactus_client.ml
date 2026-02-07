@@ -87,7 +87,7 @@ let custom_temp post_action _ =
         Result.ok ()
       ) []
 
-let main =
+let () =
   Dmenu.menu ~title:"Heater menu"
     ~msg:"Actions will take effect after up to one minute" Dmenu.[
         entry " Show temperature" read_temp;

@@ -40,4 +40,4 @@ let main () =
       entry ((span "  " "0.8")^"輦  Password menu") ~style:`Active bw;
     ]
 
-let main = main () |> Dmenu.catch_errors
+let () = main () |> Dmenu.catch_errors

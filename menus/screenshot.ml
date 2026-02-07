@@ -122,7 +122,7 @@ and menu () =
       entry "  Take a video" (fun _ -> video_menu ()) 
     ]
 
-let main =
+let () =
   let default () =
     match video_running () with
     | Some pid -> video_stop pid

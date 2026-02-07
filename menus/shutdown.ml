@@ -14,7 +14,7 @@ let launch_display_menu _ =
   process "display_menu.exe" [] |> run;
   Result.ok ()
 
-let main =
+let () =
   Dmenu.menu ~title:"Power menu" Dmenu.[
       entry ~style:`Urgent "襤 Shutdown" (action "shutdown");
       entry ~style:`Urgent "累 Reboot" (action "reboot");

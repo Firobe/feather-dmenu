@@ -24,18 +24,10 @@ let actions =
   [ "-kb-custom-1";kb_sync;
     "-kb-custom-2";kb_lock;
     "-kb-custom-3";kb_user;]
-    (* "-kb-custom-3";kb_typeall;
-    "-kb-custom-4";kb_typeuser;
-    "-kb-custom-5";kb_typepass] *)
 
 let notify title txt =
   let time = clear_time * 1000 in
   process "notify-send" [ "-t"; Int.to_string time; title; txt ] |> run
-
-let sudo args =
-  process "sudo" args
-
-let autotype t k = sudo ["ydotoll";t;k]
 
 let get_result ?(f=fun _ -> true) ?(expected=0) f_ok f_err out =
   if out.status = expected && f out then
@@ -43,12 +35,6 @@ let get_result ?(f=fun _ -> true) ?(expected=0) f_ok f_err out =
   else Result.error (`Msg (f_err out))
 
 let not_empty_stdout out = not (String.equal "" out.stdout)
-
-let array_from_name name items =
-  echo items
-  |. process "jq" ["-r"; ". | map(select((.name == \""^name^"\") and (.type == 1)))"]
-  |> collect stdout_and_status |> pack_out
-  |> get_result get_stdout (just "Could not convert name to array")
 
 let copy str =
   process "echo" ["-n";str] |. process "wl-copy" [] |> collect status
@@ -193,5 +179,5 @@ let main () =
     else
       show_items (KeyId stdout)
 
-let main =
+let () =
   main () |> Dmenu.catch_errors
